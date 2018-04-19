@@ -1,0 +1,129 @@
+season,date_ad_count,subcol_id,count_number,occupied,active,ad_ct_observer,date_ch_ct,ch_ct,ch_ct_observer,notes
+1617,12/9/2016,b33,1,151,139,AS,1/15/2017,110,AS,
+1617,12/9/2016,b33,2,158,146,AS,1/15/2017,108,EB,
+1617,12/9/2016,n12,1,92,89,AS,1/15/2017,83,AS,
+1617,12/9/2016,n12,2,91,88,AS,1/15/2017,81,EB,
+1617,12/9/2016,c6,1,131,125,AS,1/15/2017,97,AS,
+1617,12/9/2016,c6,2,129,123,AS,1/15/2017,99,EB,
+1617,12/9/2016,c51,1,126,124,AS,1/15/2017,140,AS,
+1617,12/9/2016,c51,2,126,124,AS,1/15/2017,146,AS,
+1617,12/10/2016,c46,1,127,120,AS,1/15/2017,125,AS,
+1617,12/10/2016,c46,2,130,123,AS,1/15/2017,124,AS,
+1617,12/10/2016,n28,1,50,49,AS,1/15/2017,52,AS,
+1617,12/10/2016,n28,2,50,49,AS,1/15/2017,53,EB,
+1617,12/10/2016,n22,1,51,49,AS,1/15/2017,40,AS,"small group of extra chicks (22) off to side, not sure if part of subcol. Not included in chick count"
+1617,12/10/2016,n22,2,51,49,AS,1/15/2017,44,EB,"small group of extra chicks (22) off to side, not sure if part of subcol. Not included in chick count"
+1617,12/10/2016,l13,1,708,658,AS,1/16/2017,725,AS,
+1617,12/10/2016,l13,2,749,699,AS,1/16/2017,758,AS,
+1617,12/10/2016,l23,1,9,8,AS,1/16/2017,6,AS,
+1617,12/10/2016,l17,1,226,212,AS,1/16/2017,222,,
+1617,12/10/2016,l17,2,220,206,AS,1/16/2017,220,,
+1617,12/10/2016,p21,1,174,171,AS,1/16/2017,188,,
+1617,12/10/2016,p21,2,167,164,AS,1/16/2017,183,,
+1617,12/10/2016,p22,1,75,74,AS,1/16/2017,83,,border with p23 fuzzy for chick count
+1617,12/10/2016,p22,2,75,74,AS,1/16/2017,83,,border with p23 fuzzy for chick count
+1617,12/10/2016,p39,1,94,91,AS,1/16/2017,86,,
+1617,12/10/2016,p39,2,92,89,AS,1/16/2017,87,,
+1617,12/10/2016,p42,1,137,132,AS,1/16/2017,140,,
+1617,12/10/2016,p42,2,136,131,AS,1/16/2017,143,,
+1617,12/10/2016,p44_1,1,69,64,AS,1/16/2017,61,,
+1617,12/10/2016,p44_1,2,71,66,AS,1/16/2017,57,,
+1617,12/10/2016,p44_2,1,203,196,AS,1/16/2017,149,,
+1617,12/10/2016,p44_2,2,198,191,AS,1/16/2017,159,,
+1617,12/12/2016,g23,1,29,27,AS,1/17/2017,39,EB,includes g23_1
+1617,12/12/2016,g23,2,29,27,AS,1/17/2017,41,EB,includes g23_1
+1617,12/14/2016,g32,1,67,61,AS,1/17/2017,65,AS,
+1617,12/14/2016,g32,2,68,62,AS,1/17/2017,65,AS,
+1617,12/12/2016,g35,1,491,464,AS,1/17/2017,519,AS,
+1617,12/12/2016,g35,2,488,461,AS,1/17/2017,533,AS,
+1617,12/12/2016,g23_1,1,11,10,AS,1/17/2017,NA,,"uphill of g23, see g23 for ch_ct"
+1617,12/14/2016,g43,1,88,79,AS,1/17/2017,80,,
+1617,12/14/2016,g43,2,88,79,AS,1/17/2017,80,,
+1617,12/12/2016,g54,1,77,75,AS,1/17/2017,61,,plus 5 for chick count? Border fuzzy
+1617,12/12/2016,g54,2,76,74,AS,1/17/2017,63,,plus 5 for chick count? Border fuzzy
+1617,12/12/2016,f5,1,225,215,AS,1/17/2017,248,EB,
+1617,12/12/2016,f5,2,228,218,AS,1/17/2017,253,EB,near beach
+1617,12/12/2016,f23,1,95,90,AS,1/17/2017,100,EB,
+1617,12/12/2016,f23,2,93,88,AS,1/17/2017,100,EB,
+1617,12/12/2016,t16,1,246,235,AS,1/17/2017,249,AS,fuzzy border for chick count
+1617,12/12/2016,t16,2,265,254,AS,1/17/2017,260,EB,fuzzy border for chick count
+1617,12/12/2016,s38,1,239,225,AS,1/17/2017,215,AS,
+1617,12/12/2016,s38,2,249,235,AS,1/17/2017,214,AS,
+1617,12/12/2016,s39,1,77,73,AS,1/17/2017,84,EB,
+1617,12/12/2016,s39,2,73,69,AS,1/17/2017,84,EB,
+1617,12/12/2016,s3,1,5,5,AS,1/17/2017,4,EB,
+1617,12/12/2016,s5,1,94,87,AS,1/17/2017,88,EB,
+1617,12/12/2016,s5,2,94,87,AS,1/17/2017,88,EB,
+1617,12/11/2016,d70,1,54,53,AS,1/17/2017,55,AS,
+1617,12/11/2016,d70,2,53,52,AS,1/17/2017,56,AS,
+1617,12/11/2016,d22,1,59,58,AS,1/17/2017,52,AS,
+1617,12/11/2016,d22,2,60,59,AS,1/17/2017,52,AS,
+1617,12/11/2016,d24-1,1,159,154,AS,1/17/2017,168,AS,"in 2 sections counted 159 and 152 occupied for the larger, 51 and 52 occupied for the smaller. 5 and 2 for inactive respectively. 168+43 and 163+45 for chick counts"
+1617,12/11/2016,d24-1,2,152,147,AS,1/17/2017,163,AS,"in 2 sections counted 159 and 152 occupied for the larger, 51 and 52 occupied for the smaller. 5 and 2 for inactive respectively. 168+43 and 163+45 for chick counts"
+1617,12/11/2016,d24-2,1,51,203,AS,1/17/2017,43,AS,"in 2 sections counted 159 and 152 occupied for the larger, 51 and 52 occupied for the smaller. 5 and 2 for inactive respectively. 168+43 and 163+45 for chick counts"
+1617,12/11/2016,d24-2,2,52,197,AS,1/17/2017,45,AS,"in 2 sections counted 159 and 152 occupied for the larger, 51 and 52 occupied for the smaller. 5 and 2 for inactive respectively. 168+43 and 163+45 for chick counts"
+1617,12/11/2016,d35,1,61,60,AS,1/17/2017,73,AS,
+1617,12/11/2016,d35,2,61,60,AS,1/17/2017,74,AS,
+1617,12/12/2016,g46,1,30,30,AS,1/17/2017,29,AS,
+1617,12/12/2016,g46,2,NA,NA,NA,1/17/2017,28,AS,
+1617,12/11/2016,d10-11,1,18,18,AS,1/17/2017,15,AS,
+1617,12/11/2016,d10-11,2,18,18,AS,1/17/2017,15,AS,
+1617,12/10/2016,l23_1,1,7,7,AS,1/16/2017,7,AS,
+1617,12/10/2016,t5,1,215,207,AS,1/17/2017,230,AS,
+1617,12/10/2016,t5,2,216,208,AS,1/17/2017,235,EB,
+1617,12/15/2016,misl,1,NA,18,AS,1/17/2017,12,AS,
+1617,12/15/2016,misl,2,NA,15,AS,1/17/2017,12,AS,
+1617,12/14/2016,c-pent,1,NA,6,AS,,,,
+1617,12/14/2016,d12,1,71,64,AS,1/17/2017,70,AS,
+1617,12/14/2016,d12,2,72,65,AS,1/17/2017,68,AS,
+1617,12/14/2016,d16,1,54,48,AS,1/17/2017,52,AS,
+1617,12/14/2016,d16,2,55,49,AS,1/17/2017,54,AS,
+1617,12/14/2016,d47-48,1,156,145,AS,1/17/2017,160,AS,
+1617,12/14/2016,d47-48,2,151,140,AS,1/17/2017,161,AS,
+1617,12/14/2016,d63,1,76,68,AS,NA,NA,NA,
+1617,12/14/2016,d63,2,74,66,AS,NA,NA,NA,
+1617,12/14/2016,d64,1,137,130,AS,NA,NA,NA,
+1617,12/14/2016,d64,2,136,129,AS,NA,NA,NA,
+1617,12/14/2016,qr132,1,94,82,AS,1/17/2017,85,AS,
+1617,12/14/2016,qr132,2,96,84,AS,1/17/2017,85,AS,
+1617,12/14/2016,qr139,1,68,61,AS,NA,NA,NA,
+1617,12/14/2016,qr139,2,67,60,AS,NA,NA,NA,
+1617,12/16/2016,g2,1,NA,148,AS,1/17/2017,129,EB,
+1617,12/16/2016,g2,2,NA,141,AS,1/17/2017,130,EB,
+1617,12/16/2016,f37,1,NA,191,AS,1/17/2017,200,AS,
+1617,12/16/2016,f37,2,NA,186,AS,1/17/2017,201,AS,
+1617,12/14/2016,p40_1,1,115,108,AS,NA,NA,NA,
+1617,12/14/2016,p40_1,2,117,110,AS,NA,NA,NA,
+1617,12/14/2016,p33,1,139,132,AS,1/16/2017,142,147,
+1617,12/14/2016,p33,2,143,136,AS,1/16/2017,142,147,
+1617,12/14/2016,p55,1,79,75,AS,1/16/2017,84,AS,border on E side fuzzy for chick count
+1617,12/14/2016,p55,2,78,74,AS,1/16/2017,85,AS,border on E side fuzzy for chick count
+1617,12/14/2016,c19_1,1,105,95,AS,1/16/2017,97,AS,
+1617,12/14/2016,c19_1,2,107,97,AS,1/16/2017,96,AS,
+1617,12/14/2016,c37,1,106,96,AS,1/16/2017,105,AS,
+1617,12/14/2016,c37,2,106,96,AS,1/16/2017,104,AS,
+1617,12/14/2016,c40,1,65,59,AS,1/16/2017,59,AS,
+1617,12/14/2016,c40,2,67,61,AS,1/16/2017,57,AS,
+1617,12/16/2016,hk1,1,NA,218,AS,1/16/2017,172,AS,in 2 groups. Larger active ct 165 and 176. Smaller active ct is 53 and 58. larger chick count was 130 and 135. Smaller chick count was 42 and 42
+1617,12/16/2016,hk1,2,NA,234,AS,1/16/2017,172,AS,in 2 groups. Larger active ct 165 and 176. Smaller active ct is 53 and 58. larger chick count was 130 and 135. Smaller chick count was 42 and 42
+1617,12/15/2016,b12,1,NA,215,AS,1/15/2017,241,AS,
+1617,12/15/2016,b12,2,NA,210,AS,1/15/2017,233,EB,
+1617,12/15/2016,c24,1,NA,186,AS,1/16/2017,180,AS,
+1617,12/15/2016,c24,2,NA,182,AS,1/16/2017,187,AS,
+1617,12/15/2016,p24_1,1,NA,263,AS,1/16/2017,266,AS,
+1617,12/15/2016,p24_1,2,NA,259,AS,1/16/2017,271,AS,
+1617,12/15/2016,p63,1,NA,155,AS,1/16/2017,155,AS,
+1617,12/15/2016,p63,2,NA,152,AS,1/16/2017,149,AS,
+1617,12/16/2016,qr20,1,NA,272,AS,1/17/2017,247,EB,
+1617,12/16/2016,qr20,2,NA,272,AS,1/17/2017,249,EB,
+1617,12/16/2016,qr65,1,NA,148,AS,1/17/2017,181,EB,
+1617,12/16/2016,qr65,2,NA,157,AS,1/17/2017,184,EB,
+1617,12/11/2016,d1,1,NA,1225,AS,1/17/2017,1258,AS,"active and ch counts done from photos. Count date is date photo taken, not date photo counted"
+1617,12/12/2016,b23,1,NA,1367,AS,1/15/2017,1302,AS,"active and ch counts done from photos. Count date is date photo taken, not date photo counted"
+1617,12/12/2016,b24,1,NA,229,AS,1/15/2017,202,AS,"active and ch counts done from photos. Count date is date photo taken, not date photo counted"
+1617,12/12/2016,b26,1,NA,1389,AS,1/15/2017,1402,AS,"active and ch counts done from photos. Count date is date photo taken, not date photo counted"
+1617,12/10/2016,p6,1,NA,1325,AS,12/21/2017,1355,AS,"active and ch counts done from photos. Count date is date photo taken, not date photo counted"
+1617,12/10/2016,c30-31,1,NA,887,AS,12/21/2017,967,AS,"active and ch counts done from photos. Count date is date photo taken, not date photo counted"
+1617,12/11/2016,s2,1,NA,863,AS,1/17/2017,841,AS,"active and ch counts done from photos. Count date is date photo taken, not date photo counted. Photos for chick count blurry, hard to distinguish chicks from adults"
+1617,12/12/2016,fbeach,1,NA,710,AS,1/17/2017,783,AS,"active and ch counts done from photos. Count date is date photo taken, not date photo counted. Photos for chick count blurry, hard to distinguish chicks from adults"
+1617,12/12/2016,fbeach_2,1,NA,26,AS,1/17/2017,26,AS,"active and ch counts done from photos. Count date is date photo taken, not date photo counted. Photos for chick count blurry, hard to distinguish chicks from adults"

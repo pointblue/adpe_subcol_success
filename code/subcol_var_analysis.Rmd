@@ -1,0 +1,450 @@
+---
+title: "Analysis of variation in reproductive success by subcolony"
+author: "Annie Schmidt"
+date: "June 2, 2016"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r load libraries and data}
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(mgcv)
+library(bbmle)
+
+#Set working directory
+setwd("Z:/Informatics/S031/analyses/aschmidt/subcol_var")
+
+  
+# Define functions #### 
+# correlation matrix of data
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- abs(cor(x, y, use="complete.obs"))
+    txt <- format(c(r, 0.123456789), digits = digits)[1]
+    txt <- paste0(prefix, txt)
+    if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+    text(0.5, 0.5, txt, cex = cex.cor * r)
+}
+
+
+# read in data files ####
+ct_meas <- read_csv("data/croz_selected_meas_ct_all.csv")
+spec(ct_meas)
+# select only years 1415-1718
+ct_meas_sub <- ct_meas%>%
+  filter(season%in%c("1415", "1516","1617","1718"))
+
+pairs(ct_meas_sub[!duplicated(ct_meas_sub$area),c(9:18)],lower.panel = panel.smooth, upper.panel = panel.cor)
+
+pairs(ct_meas_sub)
+# Area and perimeter highly correlated
+# Also wind and solar
+```
+
+Data exploration figs
+```{r data exploration figs, echo=FALSE}
+# number of times each subcolony counted
+n_subcol_cts <- ct_meas%>%
+  group_by(subcol)%>%
+  tally()
+
+# calculate number of subcolonies counted each year 
+n_subcol_season <- ct_meas%>%
+  group_by(season)%>%
+  tally()
+
+
+# plot ave by subcol
+ggplot(ct_meas, aes(subcol,ann_prod_anom)) + 
+  geom_boxplot() + 
+  annotate("text", x = 1:length(n_subcol_cts$subcol),y =1.65, label = n_subcol_cts$n, col="blue") + 
+  labs(y = "chicks per active nest")
+
+# plot average by season
+ct_meas$Iceberg <- ifelse(ct_meas$season%in%c("0203", "0304","0405","0506"),"Iceberg","No Iceberg")
+ggplot(ct_meas, aes(season,prod)) + 
+  geom_boxplot() + 
+  annotate("text", x = 1:length(n_subcol_season$season),y =2.1, label = n_subcol_season$n, col="blue") + 
+  labs(y = "Chicks per active nest", x="Season")
+
+# only use counts from M
+# Calculate how many subcol in M counted each yr
+n_subcol_m <- ct_meas%>%
+  filter(area_name=="m")%>%
+  group_by(season)%>%
+  tally()
+
+ct_meas%>%
+  filter(area_name=="m")%>%
+  ggplot(aes(season,prod)) + 
+  geom_boxplot(fill="grey90") + 
+  annotate("text", x = 1:length(n_subcol_m$season),y =2.1, label = n_subcol_m$n, col="black")+
+  labs(y = "Chicks per active nest", x="Season")+
+  theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
+  
+
+# plot average area of subcolonies by year
+ggplot(ct_meas,aes(season,area))+
+  geom_boxplot() + 
+  annotate("text", x = 1:length(n_subcol_season$season),y =1.7, label = n_subcol_season$n, col="blue")
+
+ggplot(ct_meas, aes(area))+
+  geom_histogram()
+
+
+# histogram of productivity estimates
+# histogram of all data
+ggplot(ct_meas, aes(prod))+
+  geom_histogram()
+
+ggplot(ct_meas, aes(ann_prod_anom))+
+  geom_histogram()
+  
+ggplot(ct_meas, aes(prod))+
+  geom_histogram(aes(colour = season)) +
+  facet_wrap(~season)
+
+# histogram of area by season
+ggplot(ct_meas, aes(area))+
+  geom_histogram(aes(colour = season)) +
+  facet_wrap(~season)
+
+# plot productivity vs area
+ggplot(ct_meas, aes(area,prod))+
+  geom_point() + 
+  facet_wrap(~season)
+
+ggplot(ct_meas, aes(perim, prod)) + 
+  geom_point() +
+  facet_wrap(~season)
+ggplot(ct_meas, aes(perim, prod)) + 
+  geom_point()
+
+```
+First modeling attempts
+```{r first modeling attempts, echo = FALSE}
+# select columns for analysis
+# calculate aspect categories####
+dat <- ct_meas_sub%>%
+  select(season,area_name, subcol,active_ct,prod,ann_prod_anom,prod_anom,area,perim,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev, mean_elev,mean_wind,mean_solar,flood_risk,skua50,skua100, col_side)%>%
+  mutate(season=factor(season),subcol=factor(subcol),col_side=factor(col_side), aspect_cat =factor(findInterval(mean_aspect,c(0,22,45,67,90,112,135,157,180,202,225,247,270,292,315,337,360))))%>%
+  # mutate(aspect_cat=factor(plyr::mapvalues(aspect_cat, from = c(1,2,3,4,5,6,10,14,15,16),
+  #                                    to = c("N", "NNE", "NE","ENE","E","ESE","SSW","WNW","NW","NNW")),levels=c("N", "NNE", "NE","ENE","E","ESE","SSW","WNW","NW","NNW"), order=TRUE))%>%
+  # remove s3 because it's an outlier
+  filter(!prod=="NA"&!is.na(pa_ratio),!subcol=="s3")%>%
+  # Scale values to make model fitting easier
+  mutate(prod_scale = (prod-mean(prod, na.rm=TRUE))/sd(prod, na.rm=TRUE),
+         area_scale=scale(area),
+         pa_scale=scale(pa_ratio),
+         slope_scale=scale(mean_slope),
+         aspect_scale=scale(mean_aspect),
+         elev_scale=scale(adjust_mean_elev),
+         wind_scale=scale(mean_wind),
+         solar_scale=scale(mean_solar),
+         flood_scale=scale(flood_risk),
+         skua50=factor(skua50),
+         skua100=factor(skua100),
+         ln_flood=log(flood_risk+0.0001),
+         flood_bin = ifelse(flood_risk>0,1,0),
+         dens = active_ct/area)
+
+sapply(dat,class)
+
+pairs(dat[,c("prod","dens","area","pa_ratio","mean_slope","mean_aspect","adjust_mean_elev", "mean_wind", "mean_solar","flood_risk","skua50","skua100")],lower.panel = panel.smooth, upper.panel = panel.cor)
+
+dat$ln_flood[dat$ln_flood=="-Inf"]<-min(dat$ln_flood)
+hist(dat$dens)
+range(dat$dens)
+boxplot(dat$dens)
+
+filter(dat,dens>4)
+
+# filter data to only include subcolonies with counts all 4 years
+all4 <- dat%>%
+  select(subcol,prod)%>%
+  group_by(subcol)%>%
+  summarise(count=n())%>%
+  filter(count==4)
+
+
+dat4 <- dat%>%
+  filter(subcol%in%all4$subcol)
+```
+
+Calculate correlation between productivity layer and bqi layer
+```{r attempt raster correlation}
+library(raster)
+
+r <- raster("C:/Users/aschmidt/Dropbox/Antarctica/GIS/bs_habitat/croz_last_bqi_surface_ebk2.tif")
+plot(r)
+r2 <- raster("C:/Users/aschmidt/Dropbox/Antarctica/GIS/bs_habitat/croz_prod_surface_ebk.tif")
+plot(r2)
+
+rs <- stack(r,r2)
+
+
+t <- read.csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/croz_2014_mean_bqi_prod_anom.txt")
+library(Hmisc)
+rcorr(t$MEAN,t$ann_prod_anom)
+
+col_aspect <- raster("C:/Users/aschmidt/Dropbox/Antarctica/GIS/bs_habitat/croz_col_aspect.tif")
+# reclassify raster to categories
+# reclassification matrix, from, to and becomes
+rcl_mat <- matrix(0,16,3)
+rcl_mat[,1] <- c(0,22,45,67,90,112,135,157,180,202,225,247,270,292,315,337)
+rcl_mat[,2]<- c(22,45,67,90,112,135,157,180,202,225,247,270,292,315,337,360)
+rcl_mat[,3]<- c(1:16)
+
+aspect_rcl <- reclassify(col_aspect,rcl_mat)
+
+col_slope <- raster("C:/Users/aschmidt/Dropbox/Antarctica/GIS/bs_habitat/croz_col_slope4.tif")
+
+col_elev <- raster("C:/Users/aschmidt/Dropbox/Antarctica/GIS/bs_habitat/croz_col_elev2.tif")
+
+col_side <- raster("C:/Users/aschmidt/Dropbox/Antarctica/GIS/bs_habitat/croz_col_side_proj.tif")
+
+# aspect_cat =findInterval(mean_aspect,c(0,22,45,67,90,112,135,157,180,202,225,247,270,292,315,337,360)))%>%
+#   mutate(aspect_cat=factor(plyr::mapvalues(aspect_cat, from = c(1,2,3,4,5,6,10,14,15,16),
+#                                      to = c("N", "NNE", "NE","ENE","E","ESE","SSW","WNW","NW","NNW"))))
+
+croz_stack <- stack(col_slope, col_side)
+croz_stack <- stack(croz_stack,col_side)
+names(croz_stack)<-c("mean_slope", "mean_aspect", "mean_elev")
+season <- factor('1516', levels=levels(dat$season))
+c
+add<- data.frame(season)
+
+t <- findInterval(mean_aspect,c(0,22,45,67,90,112,135,157,180,202,225,247,270,292,315,337,360))
+
+p <- predict(croz_stack,gam1,const=add, type="response")
+
+plot(p)
+writeRaster(p, "C:/Users/aschmidt/Dropbox/Antarctica/GIS/bs_habitat/croz_predict_prod.tif", format="GTiff")
+names(dat)
+sapply(dat,class)
+
+t <- read.csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/croz_2014_predicted_mean_prod.txt", header=TRUE)
+dat10 <- dat%>%
+  dplyr::select(subcol,prod)
+
+t <- rename(t,subcol_anom=SELECTED_SUBCOL_)
+t2 <- left_join(t,subcol_anom,by="subcol")
+Hmisc::rcorr(t2$MEAN,t2$ann_prod_anom)
+```
+
+Trying GAMs
+```{r Trying GAMMs}
+# both dist_beach highly correlated with elevation
+# removed shade because highly correlated with slope
+# removed solar because highly correlated with wind
+
+# Starting with model with all variables of interest and season as fixed effect
+k=10
+# all models with random effect of subcol
+# using REML based on recommendation in Marra and Wood 2011
+# Model with just measured variables
+gam_meas <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
+plot.gam(gam_meas, pages=1, pch=19, cex=0.5, scale=0, shade=TRUE)
+summary(gam_meas)
+        
+# Model with derived variables
+gam_deriv <-  gam(prod~s(mean_wind,k=k, bs="cs")+s(mean_solar,k=k, bs="cs")+s(ln_flood, k=k, bs="cs")+season+ s(subcol, bs="re"),data=dat, method = "REML")
+plot.gam(gam_deriv, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
+summary(gam_deriv)     
+
+# include both measured and derived  
+gam_combined <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+s(mean_wind,k=k, bs="cs")+s(mean_solar,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
+plot.gam(gam_combined, pages=1, pch=19, cex=0.5, scale=0, shade=TRUE)
+summary(gam_combined)  
+  
+concurv_comb<- concurvity(gam_combined, full=FALSE)
+
+# Remove variables with >0.6 estimated concurvity (??)
+# Slope and wind = 0.6395
+
+# remove wind
+gam_comb_slope<- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+s(mean_solar,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
+plot.gam(gam_comb_slope, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
+summary(gam_comb_slope)  
+
+# remove slope
+gam_comb_wind<- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_wind,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+s(mean_solar,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
+plot.gam(gam_comb_wind, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
+summary(gam_comb_wind) 
+
+
+
+
+# Remove vars with zero edf in combined model and add year interaction
+gam_xseason <- gam(prod~s(pa_ratio,by=season, k=k, bs="cs")+s(adjust_mean_elev,by=season,k=k, bs="cs")+s(mean_aspect, by=season,k=8,bs="cc")+s(mean_wind, by=season,k=k, bs="cs")+season,data=dat, method = "REML")
+plot.gam(gam_xseason, pages=1, pch=19, cex=0.5, shade=TRUE)
+summary(gam_xseason)  
+
+
+AICctab(gam_xseason,gam_combined,gam_comb_slope, gam_comb_wind, nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
+  
+
+
+
+
+
+
+
+
+#   gam(dens~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_wind,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+s(mean_solar,k=k, bs="cs")+flood_bin+skua100+season,data=dat[dat$season%in%c("1415","1516"),], method = "REML")
+# plot.gam(gam_dens, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
+# 
+
+
+# gam_prod_dens <- gam(prod~s(dens, k=k, bs="cs")+season,data=dat[dat$season%in%c("1415","1516"),], method = "REML")
+# 
+# gam_prod_dens_all <- gam(prod~s(dens, k=k, bs="cs")+season,data=dat, method = "REML")
+# 
+# summary(gam_prod_dens_all)
+# plot.gam(gam_prod_dens, residuals=TRUE, pages=1, pch=19, cex=0.5)
+# 
+# anova(gam1)
+# gam.check(gam1)
+# 
+# cor.test(dat$dens, dat$area)
+# plot(dat$area, dat$dens)
+# 
+# gam_t1 <- gam(dens~s(area, k=k,bs="cs"), data=dat)
+# 
+# plot.gam(gam_t1, residuals=TRUE, pages=1, pch=19, cex=0.5)
+# summary(gam_t1)
+# 
+# # run with subcol that have counts in all 4 years
+# gam1.1 <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_wind,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+s(mean_solar,k=k, bs="cs")+flood_bin+skua50+season,data=dat4, method = "REML")
+# 
+# summary(gam1.1)
+# plot.gam(gam1.1, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
+# 
+# 
+# summary(gam1)
+# anova(gam1)
+# gam.check(gam1)
+# # adding random effect for subcol
+# # Checked this against results from GAMM4 from 
+# gamm1 <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(mean_elev,k=k, bs="cs")+s(mean_wind,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+flood_bin+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
+# plot.gam(gamm1, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
+# 
+# 
+# 
+# summary(gamm1)
+# anova(gam1)
+# gam.check(gam1)
+# 
+# 
+# gam(prod~s(area, by=season, k=k, bs="cs")+s(pa, by= season, k=8, bs="cs")+s(slope, by=season,k=k, bs="cs")+s(elev, by=season,k=k, bs="cs")+s(wind, by=season,k=k, bs="cs")+ s(solar, by=season,k=k, bs="cs")+s(aspect, by=season, k=8,bs="cc")+s(flood, by=season, k=k)+skua50,data=dat)
+# plot.gam(gam1, residuals=TRUE, pages=3, pch=19, cex=0.5, scale=0)
+# 
+# # model just for 1516 with no geometry variables
+# gam_1516 <- gam(prod_scale~s(slope_scale,k=k, bs="cs")+s(elev_scale,k=k, bs="cs")+s(wind_scale,k=k, bs="cs")+ s(solar_scale,k=k, bs="cs")+s(aspect_scale, k=8,bs="cc")+s(ln_flood, k=k)+col_side +skua50,data=dat_scale[dat_scale$season=="1516",])
+# 
+# summary(gam_1516)
+# plot.gam(gam_1516, pages=1, residuals = TRUE,scale=0, cex=5)
+# 
+# 
+# # model with no season interactions
+# gam2 <- gam(prod_scale~s(area_scale, k=k, bs="cs")+s(pa_scale, k=8, bs="cs")+s(slope_scale,k=k, bs="cs")+s(elev_scale,k=k, bs="cs")+s(wind_scale,k=k, bs="cs")+ s(solar_scale,k=k, bs="cs")+s(aspect_scale, k=8,bs="cc")+s(flood_scale, k=k)+col_side +skua50 +season,data=dat_scale)
+# plot.gam(gam2, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
+# summary(gam2)
+# 
+# #model with no subcol geometry
+# gam3 <- gam(prod_scale~s(slope_scale, by=season,k=k, bs="cs")+s(elev_scale, by=season,k=k, bs="cs")+s(wind_scale, by=season,k=k, bs="cs")+ s(solar_scale, by=season,k=k, bs="cs")+s(aspect_scale, by=season, k=8,bs="cc")+s(ln_flood, by=season, k=k)+col_side*season +skua50*season,data=dat_scale)
+# plot.gam(gam3, residuals=TRUE, pages=2, pch=19, cex=0.5, scale=0)
+# summary(gam3)
+# 
+# # model with last 2 years only
+# gam4 <- gam(prod_scale~s(area_scale, by=season, k=k, bs="cs")+s(pa_scale, by= season, k=8, bs="cs")+s(slope_scale, by=season,k=k, bs="cs")+s(elev_scale, by=season,k=k, bs="cs")+s(wind_scale, by=season,k=k, bs="cs")+ s(solar_scale, by=season,k=k, bs="cs")+s(aspect_scale, by=season, k=8,bs="cc")+s(ln_flood, by=season, k=k)+col_side*season +skua50*season,data=dat_scale[dat_scale$season%in%c("1617","1718"),])
+# plot.gam(gam4, residuals=TRUE, pages=2, pch=19, cex=0.5, scale=0)
+# summary(gam4)
+# 
+# # random effect of subcol
+# gam5 <- gam(prod_scale~s(area_scale, by=season, k=k, bs="cs")+s(pa_scale, by= season, k=8, bs="cs")+s(slope_scale, by=season,k=k, bs="cs")+s(elev_scale, by=season,k=k, bs="cs")+s(wind_scale, by=season,k=k, bs="cs")+ s(solar_scale, by=season,k=k, bs="cs")+s(aspect_scale, by=season, k=8,bs="cc")+s(ln_flood, by=season, k=k)+col_side*season +skua50*season + s(subcol, bs="re"),data=dat_scale)
+# plot.gam(gam5, residuals=TRUE, pages=3, pch=19, cex=0.5, scale=0)
+# summary(gam5)
+# 
+# 
+# 
+# 
+# # run gam with unscaled variables to make prediction easier
+# gam1.1.1 <- gam(prod~s(subcol_area, by=season, k=k, bs="cs")+s(pa_ratio, by= season, k=8, bs="cs")+s(mean_slope, by=season,k=k, bs="cs")+s(mean_elev, by=season,k=k, bs="cs")+aspect_cat*season+col_side*season,data=dat[dat$season%in%c("1415","1516"),])
+# 
+# # try again removing one of the outliers
+# gam1.1 <- gam(prod_scale~s(area_scale, by=season, k=k)+s(pa_scale, by= season,k=8)+s(slope_scale, by=season, k=k)+s(elev_scale, by=season, k=k)+aspect_cat*season+col_side*season,data=dat_scale[dat_scale$season%in%c("1415","1516")&dat_scale$subcol!="s3",])
+# plot.gam(gam1.1, residuals=TRUE, pages=1, pch=19, cex=0.5)
+# summary(gam1.1)
+# anova(gam1.1)
+# gam.check(gam1.1)
+# 
+# 
+# 
+# 
+# 
+# # model using ann prod anom as dependent
+# m18<-gam(ann_prod_anom~s(subcol_area)+s(ea_ratio)+s(mean_slope)+aspect_cat+s(adjust_mean_elev)+col_side, data=dat)
+# 
+# summary(m18)
+# plot.gam(m18, residuals=TRUE,pages=1)
+# gam.check(m18)
+# 
+# 
+# 
+# 
+# # try mixed model with subcol as random effect
+# library(gamm4)
+# m19 <- gamm4(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(mean_elev,k=k, bs="cs")+s(mean_wind,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+flood_bin+skua50+season+s(subcol, bs="re"),random=~(1|subcol), data=dat)
+# summary(m19$gam)
+# anova(m19$gam)
+# plot.gam(m19$gam, scale=0,pages=1)
+# vis.gam(m19$gam)
+# 
+# 
+# 
+# 
+# 
+# # model with only last 2 years of data
+# m21 <- gam(ann_prod_anom~s(subcol_area)+s(pa_ratio)+s(mean_slope)+s(mean_aspect, bs="cc")+s(adjust_mean_elev)+col_side, data=dat[dat$season%in%c("1415","1516"),])
+# summary(m21)
+# anova(m21)
+# plot.gam(m21, residuals=TRUE, pch=19, cex=0.7, pages=1)
+# 
+# 
+# 
+# 
+# 
+# # mixed model with subcol as random effect
+# m20<-gamm4(ann_prod_anom~s(subcol_area, bs="cr")+s(pa_ratio, bs="cr")+s(mean_slope, bs="cr")+
+# aspect_cat+s(adjust_mean_elev, bs="cr")+s(dist_beach, bs="cr")+s(dist_skua, bs="cr")+
+# s(mean_shade,bs="cr")+col_side, random = ~(1|subcol),data=dat)
+# 
+# summary(m20$gam)
+# anova(m20$gam)
+# plot.gam(m20$mer, residuals=TRUE,pages=1)
+# gam.check(m18)
+# 
+# 
+# m21 <- lm(prod~season+mean_slope+I(mean_slope^2)+aspect_cat+adjust_mean_elev+I(adjust_mean_elev^2)+dist_skua+I(dist_skua^2)+col_side, data=dat)
+# 
+# 
+# dat_exp <- ct_meas%>%
+#   dplyr::select(season,area_name,subcol,active_ct, occ_ct,total_ct,ch_ct)%>%
+#   filter(area_name=="m")
+# 
+# write.csv(dat_exp,"data/croz_m_counts_0203_1516.csv")
+# 
+# group_by(ct_meas,season)%>%
+#   summarise_each(funs(sum))
+```
