@@ -19,6 +19,8 @@ library(dplyr)
 library(readr)
 library(mgcv)
 library(bbmle)
+library(dismo)
+library(gbm)
 
 #Set working directory
 setwd("Z:/Informatics/S031/analyses/aschmidt/subcol_var")
@@ -38,7 +40,7 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
 
 
 # read in data files ####
-ct_meas <- read_csv("data/croz_selected_meas_ct_all.csv")
+ct_meas <- read_csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/croz_selected_meas_ct_all.csv")
 spec(ct_meas)
 # select only years 1415-1718
 ct_meas_sub <- ct_meas%>%
@@ -53,7 +55,7 @@ First modeling attempts
 # select columns for analysis
 # calculate aspect categories####
 dat <- ct_meas_sub%>%
-  select(season,area_name, subcol,active_ct,prod,ann_prod_anom,prod_anom,area,perim,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev, mean_elev,mean_wind,mean_solar,flood_risk,skua50,skua100, col_side)%>%
+  dplyr::select(season,area_name, subcol,active_ct,prod,ann_prod_anom,prod_anom,area,perim,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev, mean_elev,mean_wind,mean_solar,flood_risk,skua50,skua100, col_side)%>%
   mutate(season=factor(season),subcol=factor(subcol),col_side=factor(col_side), aspect_cat =factor(findInterval(mean_aspect,c(0,22,45,67,90,112,135,157,180,202,225,247,270,292,315,337,360))))%>%
   # mutate(aspect_cat=factor(plyr::mapvalues(aspect_cat, from = c(1,2,3,4,5,6,10,14,15,16),
   #                                    to = c("N", "NNE", "NE","ENE","E","ESE","SSW","WNW","NW","NNW")),levels=c("N", "NNE", "NE","ENE","E","ESE","SSW","WNW","NW","NNW"), order=TRUE))%>%
@@ -169,6 +171,7 @@ Trying GAMs
 k=10
 # all models with random effect of subcol
 # using REML based on recommendation in Marra and Wood 2011
+
 # Model with just measured variables
 gam_meas <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
 plot.gam(gam_meas, pages=1, pch=19, cex=0.5, scale=0, shade=TRUE)
@@ -189,26 +192,60 @@ concurv_comb<- concurvity(gam_combined, full=FALSE)
 # Remove variables with >0.6 estimated concurvity (??)
 # Slope and wind = 0.6395
 
-# remove wind
-gam_comb_slope<- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+s(mean_solar,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
-plot.gam(gam_comb_slope, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
-summary(gam_comb_slope)  
+# Don't think I should have aspect, wind, and solar in same model
+# Use model selection for this?
+gam_aspect <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect,k=10, bs="cc")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
+plot.gam(gam_aspect, pages=1, shade=TRUE)
+summary(gam_aspect)
 
-# remove slope
-gam_comb_wind<- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_wind,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+s(mean_solar,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
-plot.gam(gam_comb_wind, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
-summary(gam_comb_wind) 
+gam_wind <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_wind,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
+summary(gam_wind)
+plot.gam(gam_wind, pages=1, shade=TRUE)
 
-gam_simpl <- gam(prod~s(pa_ratio, k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect,k=8,bs="cc")+s(mean_wind,k=k, bs="cs")+season,data=dat, method = "REML")
-summary(gam_simpl)
-plot.gam(gam_simpl, shade=TRUE, pages=1, scale=0)
+gam_solar <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_solar,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
+summary(gam_solar)
+plot.gam(gam_solar, pages=1, shade=TRUE)
+
+gam_wind_solar <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_solar,k=k, bs="cs")+s(mean_wind,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
+summary(gam_wind_solar)
+plot.gam(gam_wind_solar, pages=1, shade=TRUE)
+
+# Model selection on these
+AICctab(gam_aspect,gam_wind,gam_solar, gam_wind_solar,nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
+
+
+# # remove wind
+# gam_comb_slope<- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+s(mean_solar,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
+# plot.gam(gam_comb_slope, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
+# summary(gam_comb_slope)  
+# 
+# # remove slope
+# gam_comb_wind<- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_wind,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+s(mean_solar,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
+# plot.gam(gam_comb_wind, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
+# summary(gam_comb_wind) 
+# 
+gam_wind_simpl <- gam(prod~s(pa_ratio, k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_wind,k=8,bs="cs")+season+s(subcol, bs="re"),data=dat, method = "REML")
+summary(gam_wind_simpl)
+plot.gam(gam_wind_simpl, shade=TRUE, pages=1, scale=0)
 
 # Remove vars with zero edf in combined model and add year interaction
-gam_xseason <- gam(prod~s(pa_ratio,by=season, k=k, bs="cs")+s(adjust_mean_elev,by=season,k=k, bs="cs")+s(mean_aspect, by=season,k=8,bs="cc")+s(mean_wind, by=season,k=k, bs="cs")+season,data=dat, method = "REML")
+gam_xseason <- gam(prod~s(pa_ratio,by=season, k=k, bs="cs")+s(adjust_mean_elev,by=season,k=k, bs="cs")+s(mean_wind, by=season,k=k, bs="cs")+season+s(subcol, bs="re"),data=dat, method = "REML")
 plot.gam(gam_xseason, pages=1, pch=19, cex=0.5, shade=TRUE, scale=0)
 summary(gam_xseason)  
 
 
-AICctab(gam_xseason,gam_combined,gam_comb_slope, gam_comb_wind, nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
+AICctab(gam_xseason,gam_wind_simpl, nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
   
+```
+Trying BRT
+```{r Trying BRT}
+library(dismo)
+gbm_test<-gbm.step(data=as.data.frame(dat),gbm.y=5,gbm.x=c("area", "pa_ratio", "mean_slope", "adjust_mean_elev", "mean_wind", "mean_aspect", "mean_solar", "flood_risk", "skua50", "season"),tree.complexity=5,learning.rate=0.0001,family="gaussian",max.trees=10000)
+gbm.plot(gbm_test,smooth=TRUE, common.scale=FALSE)
+
+All_interact <- gbm.interactions(gbmAll)
+
+
+
+
 ```
