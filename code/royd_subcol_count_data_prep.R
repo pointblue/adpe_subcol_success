@@ -85,3 +85,6 @@ adct_0506 <- ct_0506%>%
   mutate(col="royd",Subcolony = tolower(Subcolony),date=as.POSIXct("2004-12-21"),notes=as.character(NA))%>%
   rename(subcol=Subcolony,occ_ct = Occ.Terr.21.Dec)%>%
   filter(!is.na(subcol))
+
+#1415
+# Think count for 14a/b is really just count for 14

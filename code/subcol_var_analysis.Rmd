@@ -172,28 +172,16 @@ k=10
 # all models with random effect of subcol
 # using REML based on recommendation in Marra and Wood 2011
 
-# Model with just measured variables
-gam_meas <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
-plot.gam(gam_meas, pages=1, pch=19, cex=0.5, scale=0, shade=TRUE)
-summary(gam_meas)
-        
-# Model with derived variables
-gam_deriv <-  gam(prod~s(mean_wind,k=k, bs="cs")+s(mean_solar,k=k, bs="cs")+s(ln_flood, k=k, bs="cs")+season+ s(subcol, bs="re"),data=dat, method = "REML")
-plot.gam(gam_deriv, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
-summary(gam_deriv)     
-
-# include both measured and derived  
-gam_combined <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+s(mean_wind,k=k, bs="cs")+s(mean_solar,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
-plot.gam(gam_combined, pages=1, pch=19, cex=0.5, shade=TRUE)
-summary(gam_combined)  
-  
-concurv_comb<- concurvity(gam_combined, full=FALSE)
+#concurv_comb<- concurvity(gam_combined, full=FALSE)
 
 # Remove variables with >0.6 estimated concurvity (??)
 # Slope and wind = 0.6395
 
 # Don't think I should have aspect, wind, and solar in same model
 # Use model selection for this?
+# Current approach
+# initial model just has aspect
+# if aspect important, replace with other variables and compare
 gam_aspect <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect,k=10, bs="cc")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
 plot.gam(gam_aspect, pages=1, shade=TRUE)
 summary(gam_aspect)
@@ -213,37 +201,35 @@ plot.gam(gam_wind_solar, pages=1, shade=TRUE)
 # Model selection on these
 AICctab(gam_aspect,gam_wind,gam_solar, gam_wind_solar,nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
 
+# model with just wind is best model (solar gets dropped)
 
-# # remove wind
-# gam_comb_slope<- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+s(mean_solar,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
-# plot.gam(gam_comb_slope, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
-# summary(gam_comb_slope)  
-# 
-# # remove slope
-# gam_comb_wind<- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_wind,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect, k=8,bs="cc")+s(mean_solar,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
-# plot.gam(gam_comb_wind, residuals=TRUE, pages=1, pch=19, cex=0.5, scale=0)
-# summary(gam_comb_wind) 
-# 
+# run model with only variables with edf >0 from previous
 gam_wind_simpl <- gam(prod~s(pa_ratio, k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_wind,k=8,bs="cs")+season+s(subcol, bs="re"),data=dat, method = "REML")
 summary(gam_wind_simpl)
 plot.gam(gam_wind_simpl, shade=TRUE, pages=1, scale=0)
 
-# Remove vars with zero edf in combined model and add year interaction
+# add year interaction to simplified model
 gam_xseason <- gam(prod~s(pa_ratio,by=season, k=k, bs="cs")+s(adjust_mean_elev,by=season,k=k, bs="cs")+s(mean_wind, by=season,k=k, bs="cs")+season+s(subcol, bs="re"),data=dat, method = "REML")
 plot.gam(gam_xseason, pages=1, pch=19, cex=0.5, shade=TRUE, scale=0)
 summary(gam_xseason)  
 
-
-AICctab(gam_xseason,gam_wind_simpl, nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
+# compare to model without year interaction
+AICctab(gam_xseason,gam_wind,gam_wind_simpl, nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
   
 ```
 Trying BRT
 ```{r Trying BRT}
-library(dismo)
-gbm_test<-gbm.step(data=as.data.frame(dat),gbm.y=5,gbm.x=c("area", "pa_ratio", "mean_slope", "adjust_mean_elev", "mean_wind", "mean_aspect", "mean_solar", "flood_risk", "skua50", "season"),tree.complexity=5,learning.rate=0.0001,family="gaussian",max.trees=10000)
-gbm.plot(gbm_test,smooth=TRUE, common.scale=FALSE)
 
-All_interact <- gbm.interactions(gbmAll)
+# Got different results usingthis approach (grrr)
+# Maybe because can't include random effect of subcol??
+# Area retained as important in this model
+
+
+# library(dismo)
+# gbm_test<-gbm.step(data=as.data.frame(dat),gbm.y=5,gbm.x=c("area", "pa_ratio", "mean_slope", "adjust_mean_elev", "mean_wind", "mean_aspect", "mean_solar", "flood_risk", "skua50", "season"),tree.complexity=5,learning.rate=0.0001,family="gaussian",max.trees=10000)
+# gbm.plot(gbm_test,smooth=TRUE, common.scale=FALSE)
+# 
+# All_interact <- gbm.interactions(gbmAll)
 
 
 
