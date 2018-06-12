@@ -116,7 +116,11 @@ t <- read.csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/croz_2014_m
 library(Hmisc)
 rcorr(t$MEAN,t$ann_prod_anom)
 
-col_aspect <- raster("C:/Users/aschmidt/Dropbox/Antarctica/GIS/bs_habitat/croz_col_aspect.tif")
+col_aspect <- raster("C:/Users/aschmidt/Dropbox/Antarctica/GIS/subcol_var/croz/layers/croz_aspect.tif")
+range(col_aspect)
+# (data,dx,xll,yll,hemi,range)
+test_correct <- trueaspect(col_aspect,dx=2,xll=254851,yll=-1343289,hemi=1,range=1)
+
 # reclassify raster to categories
 # reclassification matrix, from, to and becomes
 rcl_mat <- matrix(0,16,3)
@@ -198,8 +202,12 @@ gam_wind_solar <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mea
 summary(gam_wind_solar)
 plot.gam(gam_wind_solar, pages=1, shade=TRUE)
 
+gam_wind_solar_aspect <- gam(prod~s(area, k=k, bs="cs")+s(pa_ratio, k=k, bs="cs")+s(mean_slope,k=k, bs="cs")+s(adjust_mean_elev,k=k, bs="cs")+s(mean_aspect,k=k, bs="cs")+s(mean_aspect,k=k, bs="cs")+s(mean_wind,k=k, bs="cs")+s(flood_risk, k=k, bs="cs")+skua50+season+s(subcol, bs="re"),data=dat, method = "REML")
+summary(gam_wind_solar_aspect)
+
+
 # Model selection on these
-AICctab(gam_aspect,gam_wind,gam_solar, gam_wind_solar,nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
+AICctab(gam_wind_solar_aspect,gam_aspect,gam_wind,gam_solar, gam_wind_solar,nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
 
 # model with just wind is best model (solar gets dropped)
 

@@ -253,17 +253,21 @@ all_ct <- full_join(m_all_ct,oth_ct_format)%>%
   filter(!subcol%in%c("m36","m37"))%>%
   arrange(subcol,season)
 
-
-ann_mean_prod <- aggregate(prod~season,data=all_ct, FUN=mean)%>%
-  rename(ann_mean_prod=prod)
-mean_prod<-mean(ann_mean_prod$ann_mean_prod)
-
-all_ct_anom <- all_ct%>%
-  full_join(ann_mean_prod, by="season")%>%
-  mutate(ann_prod_anom=prod-ann_mean_prod, prod_anom=prod-mean_prod)%>%
-  # add col_side factor
-  mutate(col_side=ifelse(area_name%in%c("b","c","n","m","p","l"),"w","e"))%>%
-  arrange(season)
+# t <- all_ct%>%
+#   filter(area_name=="m")
+# write.csv(t, "Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/m_ct_ad_ch_all_clean.csv")
+ 
+ 
+# ann_mean_prod <- aggregate(prod~season,data=all_ct, FUN=mean)%>%
+#   rename(ann_mean_prod=prod)
+# mean_prod<-mean(ann_mean_prod$ann_mean_prod)
+# 
+# all_ct_anom <- all_ct%>%
+#   full_join(ann_mean_prod, by="season")%>%
+#   mutate(ann_prod_anom=prod-ann_mean_prod, prod_anom=prod-mean_prod)%>%
+#   # add col_side factor
+#   mutate(col_side=ifelse(area_name%in%c("b","c","n","m","p","l"),"w","e"))%>%
+#   arrange(season)
 
 
 # Format subcol measurements ####-------------------------------------------------------------------------------
@@ -275,10 +279,9 @@ geom_flood_14_format<- geom_flood_14_raw%>%
   select(FID,subcol, area, perim, pa_ratio,flood_risk)
 
 # load aspect stats
-aspect_14_raw <- read.csv("data/croz_selected_aspect.txt", header=TRUE)
+aspect_14_raw <- read.csv("data/croz_selected_aspect_corrected.csv", header=TRUE)
 aspect_14_format <- aspect_14_raw%>%
-  select(SUBCOL,MEAN)%>%
-  rename(subcol=SUBCOL,mean_aspect=MEAN)
+  rename(FID=SRCID_FEAT)
 
 # load elevation stats
 elev_14_raw <- read.csv("data/croz_selected_elev.txt", header=TRUE)
@@ -335,7 +338,7 @@ all_meas_14_format<-all_meas_14%>%
 # # combine count and measurement data ####---------------------------------------------------------------------------
 # 
 
-all_meas_ct <- all_ct_anom%>%
+all_meas_ct <- all_ct%>%
   inner_join(all_meas_14_format)
 # looks like losing some data in this join
 anti_join(all_ct,all_meas_ct)
