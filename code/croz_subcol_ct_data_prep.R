@@ -343,7 +343,7 @@ all_meas_ct <- all_ct%>%
 # looks like losing some data in this join
 anti_join(all_ct,all_meas_ct)
 # Subcolonies with full count data (ad and chick counts from at least one year 1415-1718) that appear to be missing measurement data:
-# c40 (only counted 1617), fbeach_2 (doesn't appear on aerial photo), g46 (counted all 4 years), l19 (only counted 1718), m19, m20 (lots of msubcol), 
+# c40 (only counted 1617), fbeach_2 (doesn't appear on aerial photo), g46 (counted all 4 years), l19 (only counted 1718), m19, m20 (lots of msubcol that don't have counts from last 4 years), 
 # qr157 (doen't look like same area was counted in 1415 and 1516, no counts from 1617 or 1718)
 # The only one that would be nice to include is g46 but not worth redoing all spatial stats for that so leaving out for now
 # 
