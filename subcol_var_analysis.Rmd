@@ -121,8 +121,8 @@ all_dat <- c_dat%>%
   mutate(subcol=as.factor(subcol), col=as.factor(col))
 
 all_dat_scale <- all_dat%>%
-  mutate(subcol=as.factor(subcol), col=as.factor(col),season=factor(season),flood_risk_trans=log1p(flood_risk),adjust_mean_aspect=log1p(mean_aspect),skua50_yn=factor(ifelse(skua50==1,"y","n")))%>%
-  mutate_at(vars(active_ct,prod,area,perim,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_elev,mean_wind,mean_solar,flood_risk_trans, adjust_mean_aspect),funs(scale))
+  mutate(subcol=as.factor(subcol), col=as.factor(col),season=factor(season),flood_risk_trans=log1p(flood_risk),skua50_yn=factor(ifelse(skua50==1,"y","n")))%>%
+  mutate_at(vars(active_ct,prod,area,perim,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_elev,mean_wind,mean_solar,flood_risk_trans),funs(scale))
 
 # melt data for data vis
 subcol_attr <- all_dat_scale%>%
@@ -178,7 +178,7 @@ Trying GAMMs
 # # Not sure I should have aspect, wind, and solar in same model
 # # Use model selection for this?
 
-gam_c_global <- gam(prod~s(area)+s(pa_ratio)+s(mean_slope)+s(adjust_mean_aspect,k=10, bs="cc") +s(mean_solar) +s(mean_wind)+s(flood_risk_trans)+skua50+season+s(subcol,k=k, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+gam_c_global <- gam(prod~s(pa_ratio)+s(mean_slope)+ s(adjust_mean_elev) +s(mean_aspect, bs="cc") +s(mean_solar) +s(mean_wind)+s(flood_risk_trans)+skua50_yn+season+s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
 summary(gam_c_global)
 anova(gam_c_global)
 plot.gam(gam_c_global,pages=1, scale=0, shade=TRUE)
@@ -194,128 +194,182 @@ concurvity(gam_c_global, full=FALSE)
 # tried a skua interaction with pa_ratio. Came out as significant, but main difference was that subcol with high pa_ratio with a skua within 50m has slighty less negative impact. Really not much data at that end though so don't think this is a good idea. Going to drop it.
 
 k=5
-gam_c_globalx <- gam(prod~s(pa_ratio, by=skua50_yn,k=k) +s(mean_slope, by=season,k=k)+s(adjust_mean_elev,by=season,k=k)+s(adjust_mean_aspect, by=season,k=k) +s(mean_solar, by=season,k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn+ season + s(subcol,k=k, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+gam_c_globalx <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k)+s(adjust_mean_elev,by=season,k=k)+s(mean_aspect, by=season,k=k, bs="cc") +s(mean_solar, by=season,k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
 
 summary(gam_c_globalx)
 anova(gam_c_globalx)
 par(mfrow=c())
 plot.gam(gam_c_globalx, pages=2,scale=0, shade=TRUE)
 
-# season interaction with pa_ratio instead of skua
-gam_c_globalx2 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k)+s(adjust_mean_elev,by=season,k=k)+s(adjust_mean_aspect, by=season,k=k) +s(mean_solar, by=season,k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn+ season + s(subcol,k=k, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
-summary(gam_c_globalx2)
+# # season interaction with pa_ratio instead of skua
+# gam_c_globalx2 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k)+s(adjust_mean_elev,by=season,k=k)+s(mean_aspect, by=season,k=k,bs="cc") +s(mean_solar, by=season,k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+# summary(gam_c_globalx2)
 
 
 # check how compare
 AICctab(gam_c_globalx2,gam_c_globalx,nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
 
-# remove variables with edf = 0 and refit: area, slope, solar, flood
-gam_c_simp <- gam(prod~s(pa_ratio)+s(adjust_mean_elev)+s(adjust_mean_aspect,k=10, bs="cc")+s(mean_wind)+skua50+season+s(subcol,k=k, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE,method="ML")
+# remove variables with edf = 0 and refit: slope, solar, flood
+gam_c_simp <- gam(prod~s(pa_ratio)+s(adjust_mean_elev)+s(mean_wind)+skua50_yn+season+s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",],method="ML")
 summary(gam_c_simp)
 plot.gam(gam_c_simp, shade=TRUE, pages=1, scale=0)
 
-# model simp with season interaction
-gam_c_xseas <- gam(prod~s(pa_ratio, by=season)+ s(adjust_mean_elev,by=season,k=k, bs=) +s(adjust_mean_aspect,by=season,k=10, bs="cc") +s(mean_wind,by=season)+skua50*season+s(subcol,k=k, bs="re"),data=all_dat_scale[all_dat_scale$col=="croz",],select=TRUE, method="ML")
-summary(gam_c_xseas)
-anova(gam_c_xseas)
-plot.gam(gam_c_xseas,pages=2,shade=TRUE, scale=0)
+# # model simp with season interaction
+# gam_c_xseas <- gam(prod~s(pa_ratio, by=season)+ s(adjust_mean_elev,by=season,k=k, bs=) +s(adjust_mean_aspect,by=season,k=10, bs="cc") +s(mean_wind,by=season)+skua50*season+s(subcol,k=k, bs="re"),data=all_dat_scale[all_dat_scale$col=="croz",],select=TRUE, method="ML")
+# summary(gam_c_xseas)
+# anova(gam_c_xseas)
+# plot.gam(gam_c_xseas,pages=2,shade=TRUE, scale=0)
 
 # check how compare
-AICctab(gam_c_simp,gam_c_global,gam_c_globalx, gam_c_globalx2,gam_c_xseas,nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
+AICctab(gam_c_simp,gam_c_global,gam_c_globalx, gam_c_globalx2,nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
 
+# Try to simplify globalx model
+# Remove season interaction one by one
+
+# do not apply penalty to selecting interactions???
+# remove interaction with pa_ratio
+c_xs1 <- gam(prod~s(pa_ratio,k=k) + s(mean_slope,by=season,k=k)+ s(adjust_mean_elev,by=season,k=k)+s(mean_aspect, by=season,k=k,bs="cc") +s(mean_solar, by=season,k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], method="ML", select=TRUE)
+
+# slope
+c_xs2 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope,k=k)+s(adjust_mean_elev,by=season,k=k)+s(mean_aspect, by=season,k=k,bs="cc")+ s(mean_solar, by=season,k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+#elev
+c_xs3 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope,by=season,k=k)+s(adjust_mean_elev,k=k)+s(mean_aspect, by=season,k=k,bs="cc") +s(mean_solar, by=season,k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+summary(c_xs3)
+# dropping solar
+
+
+#aspect
+c_xs4 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope,by=season,k=k)+s(adjust_mean_elev,by=season,k=k)+s(mean_aspect,k=k,bs="cc")+s(mean_solar, by=season,k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+# solar
+c_xs5 <- gam(prod~s(pa_ratio,by=season,k=k) +s(mean_slope,by=season,k=k)+s(adjust_mean_elev,by=season,k=k)+s(mean_aspect,by=season,k=k, bs="cc") +s(mean_solar,k=k) +s(mean_wind,by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+# wind
+c_xs6 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope,by=season,k=k)+s(adjust_mean_elev,by=season,k=k)+s(mean_aspect,by=season,k=k,bs="cc") +s(mean_solar, by=season,k=k) +s(mean_wind,k=k) +s(flood_risk_trans,by=season, k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+# skua
+c_xs7 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope,by=season,k=k)+s(adjust_mean_elev,by=season,k=k)+s(mean_aspect,by=season,k=k,bs="cc") +s(mean_solar, by=season,k=k) +s(mean_wind,by=season,k=k) +s(flood_risk_trans,by=season,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+# check how compare
+AICctab(gam_c_simp,gam_c_global,gam_c_globalx, gam_c_globalx2, c_xs1, c_xs2, c_xs3, c_xs4, c_xs5, c_xs6,c_xs7, nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
+
+# removing season interaction with slope and wind both improved AIC slightly
+
+# round 2
+# start with model with interaction with elevation removed and remove additional interactions
+# remove interaction with pa_ratio
+c_xs3.1 <- gam(prod~s(pa_ratio,k=k) +s(mean_slope,by=season,k=k)+s(adjust_mean_elev,k=k)+s(mean_aspect, by=season,k=k,bs="cc") +s(mean_solar, by=season, k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+#slope
+c_xs3.2 <- gam(prod~s(pa_ratio, by=season,k=k) + s(mean_slope,k=k)+s(adjust_mean_elev,k=k)+s(mean_aspect, by=season,k=k,bs="cc")+s(mean_solar, by=season, k=k)+s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+summary(c_xs3.2)
+
+# aspect
+c_xs3.3 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k)+s(adjust_mean_elev,k=k)+s(mean_aspect,k=k,bs="cc")+s(mean_solar, by=season,k=k) + s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+summary(c_xs1.3)
+plot.gam(c_xs1.3, pages=1, shade=T)
+
+# solar
+c_xs3.4<- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k)+s(adjust_mean_elev,k=k)+s(mean_aspect,by=season,k=k,bs="cc")+s(mean_solar,k=k) + s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+#wind
+c_xs3.5<- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k)+s(adjust_mean_elev,k=k)+s(mean_aspect,by=season,k=k,bs="cc")+s(mean_solar, by=season, k=k) + s(mean_wind,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+#flood
+c_xs3.6 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope,by=season,k=k)+s(adjust_mean_elev,k=k)+s(mean_aspect, by=season,k=k,bs="cc") + s(mean_solar, by=season, k=k)+s(mean_wind, by=season,k=k)+s(flood_risk_trans,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+#skua
+c_xs3.7 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k) +s(adjust_mean_elev,k=k)+s(mean_aspect, by=season,k=k,bs="cc") + s(mean_solar, by=season, k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+summary(c_xs3.7)
+
+
+AICctab(gam_c_simp,gam_c_global,gam_c_globalx, gam_c_globalx2,gam_c_xseas,c_xs1, c_xs2, c_xs3, c_xs4, c_xs5, c_xs6,c_xs3.1,c_xs3.2,c_xs3.3,c_xs3.4,c_xs3.5,c_xs3.6,c_xs3.7, nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
+
+# model with interaction with slope and wind removed is best
+
+# round 3
+# continue removing additional season interactions
+# remove pa_ratio
+c_xs3.7.1 <- gam(prod~s(pa_ratio,k=k)+s(adjust_mean_elev,k=k) +s(mean_slope, by=season,k=k) +s(mean_aspect, by=season,k=k, bs="cc") + s(mean_solar, by=season, k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+summary(c_xs3.7.1)
+plot.gam(c_xs3.7.1, pages=2, shade=TRUE)
+
+#slope
+c_xs3.7.2 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope,k=k) +s(adjust_mean_elev,k=k)+s(mean_aspect, by=season,k=k, bs="cc") + s(mean_solar, by=season, k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+#aspect
+c_xs3.7.3 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k) +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k, bs="cc") + s(mean_solar, by=season, k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+summary(c_xs3.7.3)
+
+# solar
+c_xs3.7.4 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k) +s(adjust_mean_elev,k=k)+s(mean_aspect, by=season,k=k, bs="cc") + s(mean_solar, k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+# wind
+c_xs3.7.5 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k) +s(adjust_mean_elev,k=k)+s(mean_aspect, by=season,k=k, bs="cc") + s(mean_solar, by=season, k=k) +s(mean_wind,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+# flood
+c_xs3.7.6 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k) +s(adjust_mean_elev,k=k)+s(mean_aspect, by=season,k=k, bs="cc") + s(mean_solar, by=season, k=k) +s(mean_wind,by=season,k=k)+s(flood_risk_trans,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+
+AICctab(gam_c_simp,gam_c_global,gam_c_globalx, gam_c_globalx2,gam_c_xseas,c_xs1, c_xs2, c_xs3, c_xs4, c_xs5, c_xs6,c_xs3.1,c_xs3.2,c_xs3.3,c_xs3.4,c_xs3.5,c_xs3.6,c_xs3.7,c_xs3.7.1,c_xs3.7.2,c_xs3.7.3,c_xs3.7.4,c_xs3.7.5,c_xs3.7.6, nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
+
+# round 4
+# slope
+c_xs3.7.3.1 <- gam(prod~s(pa_ratio,by=season,k=k, bs="fs") +s(mean_slope,k=k) +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k,  bs="cc") + s(mean_solar, by=season,k=k, bs="fs") +s(mean_wind, by=season,k=k, bs="fs")+s(flood_risk_trans, by=season,k=k, bs="fs")+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+summary(c_xs3.7.3.1)
+# aspect
+c_xs3.7.3.2 <- gam(prod~s(pa_ratio,by=season,k=k, bs="fs") +s(mean_slope, by=season,k=k, bs="fs") +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k,  bs="cc") + s(mean_solar, by=season,k=k, bs="fs") +s(mean_wind, by=season,k=k, bs="fs")+s(flood_risk_trans, by=season,k=k, bs="fs")+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+# solar
+c_xs3.7.3.3 <- gam(prod~s(pa_ratio,by=season,k=k, bs="fs") +s(mean_slope, by=season,k=k, bs="fs") +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k, bs="cc") + s(mean_solar, k=k) +s(mean_wind,by=season,k=k, bs="fs")+s(flood_risk_trans,by=season,k=k, bs="fs")+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+# wind
+c_xs3.7.3.4 <- gam(prod~s(pa_ratio,by=season,k=k, bs="fs") +s(mean_slope, by=season,k=k, bs="fs") +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k, bs="cc") + s(mean_solar, by=season,k=k, bs="fs") +s(mean_wind,k=k)+s(flood_risk_trans, by=season,k=k, bs="fs")+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+# flood
+c_xs3.7.3.5 <- gam(prod~s(pa_ratio,by=season,k=k, bs="fs") +s(mean_slope,by=season,k=k, bs="fs") +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k, bs="cc") + s(mean_solar, by=season,k=k, bs="fs") +s(mean_wind, by=season,k=k, bs="fs")+s(flood_risk_trans,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+
+AICctab(gam_c_simp,gam_c_global,gam_c_globalx, gam_c_globalx2,gam_c_xseas,c_xs1, c_xs2, c_xs3, c_xs4, c_xs5, c_xs6,c_xs3.1,c_xs3.2,c_xs3.3,c_xs3.4,c_xs3.5,c_xs3.6,c_xs3.7,c_xs3.7.1,c_xs3.7.2,c_xs3.7.3,c_xs3.7.4,c_xs3.7.5,c_xs3.7.6,c_xs3.7.3.1,c_xs3.7.3.2,c_xs3.7.3.3,c_xs3.7.3.4,c_xs3.7.3.5, nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
+
+# round 5
+# pa_ratio
+c_xs3.7.3.5.1 <- gam(prod~s(pa_ratio,k=k) +s(mean_slope,by=season,k=k, bs="fs") +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k, bs="cc") + s(mean_solar, by=season,k=k, bs="fs") +s(mean_wind, by=season,k=k, bs="fs")+s(flood_risk_trans,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+#slope
+c_xs3.7.3.5.2 <- gam(prod~s(pa_ratio,by=season,k=k, bs="fs") +s(mean_slope,k=k) +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k, bs="cc") + s(mean_solar, by=season,k=k, bs="fs") +s(mean_wind, by=season,k=k, bs="fs")+s(flood_risk_trans,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+#solar
+c_xs3.7.3.5.3 <- gam(prod~s(pa_ratio,by=season,k=k, bs="fs") +s(mean_slope,by=season,k=k, bs="fs") +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k, bs="cc") + s(mean_solar,k=k) +s(mean_wind, by=season,k=k, bs="fs")+s(flood_risk_trans,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+#wind
+c_xs3.7.3.5.4 <- gam(prod~s(pa_ratio,by=season,k=k, bs="fs") +s(mean_slope,by=season,k=k, bs="fs") +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k, bs="cc") + s(mean_solar, by=season,k=k, bs="fs") +s(mean_wind,k=k)+s(flood_risk_trans,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+
+AICctab(gam_c_simp,gam_c_global,gam_c_globalx, gam_c_globalx2,gam_c_xseas,c_xs1, c_xs2, c_xs3, c_xs4, c_xs5, c_xs6,c_xs3.1,c_xs3.2,c_xs3.3,c_xs3.4,c_xs3.5,c_xs3.6,c_xs3.7,c_xs3.7.1,c_xs3.7.2,c_xs3.7.3,c_xs3.7.4,c_xs3.7.5,c_xs3.7.6,c_xs3.7.3.1,c_xs3.7.3.2,c_xs3.7.3.3,c_xs3.7.3.4,c_xs3.7.3.5,c_xs3.7.3.5.1,c_xs3.7.3.5.2,c_xs3.7.3.5.3,c_xs3.7.3.5.4, nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
+
+# round 6
+# pa_ratio
+c_xs3.7.3.5.2.1 <- gam(prod~s(pa_ratio,k=k) +s(mean_slope,k=k) +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k, bs="cc") + s(mean_solar, by=season,k=k, bs="fs") +s(mean_wind, by=season,k=k, bs="fs")+s(flood_risk_trans,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+# solar
+c_xs3.7.3.5.2.2 <- gam(prod~s(pa_ratio,by=season,k=k, bs="fs") +s(mean_slope,k=k) +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k, bs="cc") + s(mean_solar,k=k) +s(mean_wind, by=season,k=k, bs="fs")+s(flood_risk_trans,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+# wind
+c_xs3.7.3.5.2.3 <- gam(prod~s(pa_ratio,by=season,k=k, bs="fs") +s(mean_slope,k=k) +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k, bs="cc") + s(mean_solar, by=season,k=k, bs="fs") +s(mean_wind,k=k)+s(flood_risk_trans,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+AICctab(gam_c_simp,gam_c_global,gam_c_globalx, gam_c_globalx2,gam_c_xseas,c_xs1, c_xs2, c_xs3, c_xs4, c_xs5, c_xs6,c_xs3.1,c_xs3.2,c_xs3.3,c_xs3.4,c_xs3.5,c_xs3.6,c_xs3.7,c_xs3.7.1,c_xs3.7.2,c_xs3.7.3,c_xs3.7.4,c_xs3.7.5,c_xs3.7.6,c_xs3.7.3.1,c_xs3.7.3.2,c_xs3.7.3.3,c_xs3.7.3.4,c_xs3.7.3.5,c_xs3.7.3.5.1,c_xs3.7.3.5.2,c_xs3.7.3.5.3,c_xs3.7.3.5.4,c_xs3.7.3.5.2.1, c_xs3.7.3.5.2.2, c_xs3.7.3.5.2.3, nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
+
+# round 7
+# pa_ratio
+c_xs3.7.3.5.2.3.1 <- gam(prod~s(pa_ratio,k=k) +s(mean_slope,k=k) +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k, bs="cc") + s(mean_solar, by=season,k=k, bs="fs") +s(mean_wind,k=k)+s(flood_risk_trans,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+#solar
+c_xs3.7.3.5.2.3.2 <- gam(prod~s(pa_ratio,by=season,k=k, bs="fs") +s(mean_slope,k=k) +s(adjust_mean_elev,k=k)+s(mean_aspect,k=k, bs="cc") + s(mean_solar,k=k, bs="fs") +s(mean_wind,k=k)+s(flood_risk_trans,k=k)+ skua50_yn+season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+
+AICctab(gam_c_global,gam_c_globalx,c_xs1, c_xs2, c_xs3, c_xs4, c_xs5, c_xs6,c_xs3.1,c_xs3.2,c_xs3.3,c_xs3.4,c_xs3.5,c_xs3.6,c_xs3.7,c_xs3.7.1,c_xs3.7.2,c_xs3.7.3,c_xs3.7.4,c_xs3.7.5,c_xs3.7.6,c_xs3.7.3.1,c_xs3.7.3.2,c_xs3.7.3.3,c_xs3.7.3.4,c_xs3.7.3.5,c_xs3.7.3.5.1,c_xs3.7.3.5.2,c_xs3.7.3.5.3,c_xs3.7.3.5.4,c_xs3.7.3.5.2.1, c_xs3.7.3.5.2.2, c_xs3.7.3.5.2.3,c_xs3.7.3.5.2.3.1,c_xs3.7.3.5.2.3.2, nobs=276, base=TRUE, weights=TRUE, logLik=TRUE)
+
+summary(c_xs3.7.3.5.2.3.2)
+plot.gam(c_xs3.7.3.5.2.3.2, page=1,shade=T)
 
 ```
-Cross validation attempt at Crozier
-```{r cross validation at Crozier}
-# try some cross validation ####
-# using data scaled for both colonies together to aid comparison
 
-#create table holding out data from 1415
-c_s234<- all_dat_scale%>%
-  filter(!season=="1415", col=="croz")
-gam_c_global_s234 <- gam(prod~s(area, k=k,bs="cr")+s(pa_ratio, k=k, bs="cr")+s(mean_slope,k=k, bs="cr")+s(adjust_mean_elev,k=k, bs="cr")+s(adjust_mean_aspect,k=10, bs="cc")+s(mean_solar,k=k, bs="cr")+s(mean_wind,k=k, bs="cr")+s(flood_risk, k=k, bs="cr")+skua50+season+s(subcol,k=k, bs="re"),data=c_s234,select=TRUE, method="ML")
-
-summary(gam_c_global_s234)
-plot.gam(gam_c_global_s234, pages=1, scale=0, shade=T)
-
-c_s1 <- all_dat_scale%>%
-  filter(season=="1415", col=="croz")
-# predict to 1415
-gam_c_pred_s1<- predict(gam_c_global_g1,newdata=c_s1)
-rcorr(gam_c_pred_s1, c_s1$prod)
-plot(gam_c_pred_s1, c_s1$prod)
-
-
-# fit model to season 134
-c_s134<- all_dat_scale%>%
-  filter(!season=="1516", col=="croz")
-gam_c_global_s134 <- gam(prod~s(area, k=k,bs="cr")+s(pa_ratio, k=k, bs="cr")+s(mean_slope,k=k, bs="cr")+s(adjust_mean_elev,k=k, bs="cr")+s(adjust_mean_aspect,k=10, bs="cc")+s(mean_solar,k=k, bs="cr")+s(mean_wind,k=k, bs="cr")+s(flood_risk, k=k, bs="cr")+skua50+season+s(subcol,k=k, bs="re"),data=c_s134,select=TRUE, method="ML")
-
-summary(gam_c_global_s134)
-plot.gam(gam_c_global_s134, pages=1, scale=0, shade=T)
-
-c_s2 <- all_dat_scale%>%
-  filter(season=="1516", col=="croz",!subcol=="d24")%>%
-  mutate(season="1415")
-# predict to 1516
-gam_c_pred_s2<- predict(gam_c_global_s134,newdata=c_s2)
-rcorr(scale(gam_c_pred_s2), scale(c_s2$prod))
-plot(gam_c_pred_s2, c_s2$prod)
-
-
-# fit model to season 124
-c_s124<- all_dat_scale%>%
-  filter(!season=="1617", col=="croz")
-gam_c_global_s124 <- gam(prod~s(area, k=k,bs="cr")+s(pa_ratio, k=k, bs="cr")+s(mean_slope,k=k, bs="cr")+s(adjust_mean_elev,k=k, bs="cr")+s(adjust_mean_aspect,k=10, bs="cc")+s(mean_solar,k=k, bs="cr")+s(mean_wind,k=k, bs="cr")+s(flood_risk, k=k, bs="cr")+skua50+season+s(subcol,k=k, bs="re"),data=c_s124,select=TRUE, method="ML")
-
-summary(gam_c_global_s124)
-plot.gam(gam_c_global_s124, pages=1, scale=0, shade=T)
-
-c_s3 <- all_dat_scale%>%
-  filter(season=="1617", col=="croz", !subcol%in%c("b12", "d24_1", "d24_2", "p55"))%>%
-  mutate(season="1415")
-# predict to 1617
-gam_c_pred_s3<- predict(gam_c_global_s124,newdata=c_s3)
-rcorr(scale(gam_c_pred_s3), scale(c_s3$prod))
-plot(gam_c_pred_s3, c_s3$prod)
-
-# fit model to season 123
-c_s123<- all_dat_scale%>%
-  filter(!season=="1718", col=="croz")
-gam_c_global_s123 <- gam(prod~s(area, k=k,bs="cr")+s(pa_ratio, k=k, bs="cr")+s(mean_slope,k=k, bs="cr")+s(adjust_mean_elev,k=k, bs="cr")+s(adjust_mean_aspect,k=10, bs="cc")+s(mean_solar,k=k, bs="cr")+s(mean_wind,k=k, bs="cr")+s(flood_risk, k=k, bs="cr")+skua50+season+s(subcol,k=k, bs="re"),data=c_s123,select=TRUE, method="ML")
-
-summary(gam_c_global_s123)
-plot.gam(gam_c_global_s123, pages=1, scale=0, shade=T)
-
-c_s4 <- all_dat_scale%>%
-  filter(season=="1718", col=="croz",!subcol%in%c("b10", "b25", "c58", "n10", "n11", "p22-23", "p40_1", "s33", "t18", "t7"))%>%
-  mutate(season="1516",subcol="m5")
-# predict to 1718
-gam_c_pred_s4<- predict(gam_c_global_s123,newdata=c_s4)
-rcorr(scale(gam_c_pred_s4), scale(c_s4$prod))
-plot(gam_c_pred_s3, c_s3$prod)
-
-# predict to years using model fit to all data
-gam_c_gpred_s1 <- predict(gam_c_global, newdata=c_s1)
-rcorr(scale(gam_c_gpred_s1), scale(c_s1$prod))
-
-c_s2 <- all_dat_scale%>%
-  filter(season=="1516", col=="croz")
-gam_c_gpred_s2 <- predict(gam_c_global, newdata=c_s2)
-rcorr(scale(gam_c_gpred_s2), scale(c_s2$prod))
-
-
-c_s3 <- all_dat_scale%>%
-  filter(season=="1617", col=="croz")
-gam_c_gpred_s3 <- predict(gam_c_global, newdata=c_s3)
-rcorr(scale(gam_c_gpred_s3), scale(c_s3$prod))
-
-c_s4 <- all_dat_scale%>%
-  filter(season=="1718", col=="croz")
-gam_c_gpred_s4 <- predict(gam_c_global, newdata=c_s4)
-rcorr(scale(gam_c_gpred_s4), scale(c_s4$prod))
-
-```
 Gamms for Royds
 ```{r Royds Gamms, include=FALSE}
 k=4
