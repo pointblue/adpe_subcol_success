@@ -35,15 +35,15 @@ library(bbmle)
 panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
     usr <- par("usr"); on.exit(par(usr))
     par(usr = c(0, 1, 0, 1))
-    r <- abs(cor(x, y, use="complete.obs"))
+    r <- cor(x, y, use="complete.obs")
     txt <- format(c(r, 0.123456789), digits = digits)[1]
     txt <- paste0(prefix, txt)
     if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
-    text(0.5, 0.5, txt, cex = cex.cor * r)
+    text(0.5, 0.5, txt, cex = cex.cor * abs(r))
 }
 
 
-# read in data files ####
+# read in count data files with subcolony attributes (created by croz(royd)_subcol_ct_data_prep.R) ####
 # Crozier
 c_ct_meas <- read.csv("data/croz_selected_meas_ct_all.csv")
 
@@ -62,7 +62,7 @@ Format data for modeling
 
 c_dat <- c_ct_meas%>%
   dplyr::select(col,season,area_name, subcol,active_ct,prod,area,perim,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_elev,mean_wind,mean_solar,flood_risk,skua50,skua100)%>%
-  mutate(season=factor(season),subcol=factor(subcol))%>%
+  mutate(season=factor(season),subcol=factor(subcol), m=ifelse(area_name=="m","y","n"))%>%
    #shift aspect values >300 to other side of 0
          #=ifelse(!is.na(mean_aspect)&mean_aspect>300,mean_aspect-360,mean_aspect), m_not=ifelse(area_name=="m","m","other"))%>%
 # select only years 1415-1718  # remove s3 because it's an outlier
@@ -71,24 +71,8 @@ c_dat <- c_ct_meas%>%
   mutate(growth=(active_ct/lag(active_ct)-1)*100)%>%
   ungroup()
 
-# set levels for season to allow older seasons to be used
-levels(c_dat$season)<-levels(factor(c_ct_meas$season))
-
-# hold out data from random subcol and random years
-set.seed(13)
-hold_index <- sample(1:nrow(c_dat), 30,replace=FALSE)
-
-c_dat_hold <- c_dat[hold_index,]
-c_dat <- c_dat[-hold_index,]
-
-
-hist(c_dat$growth)
-
-
-# Scale values to make model fitting easier
-c_dat_scale <- c_dat%>%
-  #select(-col,-season,-area_name,-subcol,-mean_elev)%>%
-  mutate_at(vars(active_ct,prod,area,perim,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_elev,mean_wind,mean_solar,flood_risk, adjust_mean_aspect),funs(scale))
+# # set levels for season to allow older seasons to be used
+# levels(c_dat$season)<-levels(factor(c_ct_meas$season))
 
 
 # Format Royds data
@@ -103,58 +87,66 @@ r_dat <- r_ct_meas%>%
 # r_dat$mean_slope[r_dat$subcol=="1b"]<- 25.37
 # crazy slope causes other variables to be off also, just going to remove 1b
 
-# Scale values to make model fitting easier
-r_dat_scale<- r_dat%>%
-  mutate(flood_riskperc=flood_risk/max(flood_risk,na.rm=TRUE))%>%
-  mutate_at(vars(active_ct,prod,area,perim,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_elev,mean_wind,mean_solar),funs(scale))
-  
-
-sapply(r_dat,class)
-
-pairs(c_dat_scale[,c("prod","area","pa_ratio","mean_slope","mean_aspect","adjust_mean_elev", "mean_wind", "mean_solar","flood_risk","skua50","skua100")],lower.panel = panel.smooth, upper.panel = panel.cor)
-
-# c_dat$ln_flood[c_dat$ln_flood=="-Inf"]<-min(c_dat$ln_flood)
 
 # Combine data
 all_dat <- c_dat%>%
   full_join(r_dat)%>%
   mutate(subcol=as.factor(subcol), col=as.factor(col))
 
+# scale all data to make model fitting easier
 all_dat_scale <- all_dat%>%
   mutate(subcol=as.factor(subcol), col=as.factor(col),season=factor(season),flood_risk_trans=log1p(flood_risk),skua50_yn=factor(ifelse(skua50==1,"y","n")))%>%
   mutate_at(vars(active_ct,prod,area,perim,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_elev,mean_wind,mean_solar,flood_risk_trans),funs(scale))
+            
+
+# Data vis ####
+
+pairs(c_dat[,c("prod","area","pa_ratio","mean_slope","mean_aspect","adjust_mean_elev", "mean_wind", "mean_solar","flood_risk","skua50")],lower.panel = panel.smooth, upper.panel = panel.cor)
+
 
 # melt data for data vis
 subcol_attr <- all_dat_scale%>%
-  select(-season,-active_ct,-prod,-growth,-area_name,-skua50,-skua100, -mean_elev, -perim, -adjust_mean_aspect)%>%
-  group_by(col, subcol)%>%
-  dplyr::slice(1)%>%
-  gather(subcol_attr,value=measurement,-col,-subcol)
+  select(-flood_risk,-active_ct,-prod,-growth,-skua50,-skua100, -mean_elev, -perim, -skua50_yn)%>%
+  # dplyr::slice(1)%>%
+  gather(subcol_attr,value=measurement,-col,-season,-area_name,-subcol)
 
+# plot subcol attributes by col
 p<-ggplot(subcol_attr, aes(x=col, y=measurement,fill=subcol_attr))+
-    geom_boxplot()
-p +  facet_wrap(~subcol_attr,scales="free")+
-    labs(x="subcol")
+  geom_boxplot()
+p + facet_wrap(~subcol_attr,scales="free")
 
+# plot subcol attributes at croz by season
+p2<- ggplot(filter(subcol_attr,col=="croz"), aes(x=subcol_attr,y=measurement,fill=season))+
+              geom_boxplot()
+# plot subcol attributes in m vs outside m
+p3_dat <- subcol_attr%>%
+  mutate(m = ifelse(area_name=="m", "y","n"))%>%
+  filter(col=="croz")
+p3<- ggplot(p3_dat, aes(x=subcol_attr,y=measurement,fill=m))
+p3 + geom_boxplot()
+            
 # plot with M counts compared to outside of M
-m_cts <- c_ct_meas%>%
-  select(season,area_name, subcol, prod)%>%
-  mutate(season=factor(season))%>%
-  filter(area_name=="m", season%in%c('1415','1516','1617','1718'))
+# m_cts <- c_ct_meas%>%
+#   select(season,area_name, subcol, prod)%>%
+#   mutate(season=factor(season), m_note=ifelse())%>%
+#   filter(area_name=="m", season%in%c('1415','1516','1617','1718'))
 
-c_dat 
-ggplot(c_dat, aes(season,prod, fill=m_not))+
+ggplot(c_dat, aes(season,prod, fill=m))+
   geom_boxplot()
 
-ggplot(c_dat, aes(m_not,prod))+
+ggplot(c_dat, aes(m,prod, fill=m))+
   geom_boxplot()
 
 ggplot(c_dat, aes(area_name,prod))+
   geom_boxplot(fill="dodgerblue")
 
-t.test(c_dat$prod[c_dat$m_not=="m"],c_dat$prod[!c_dat$m_not=="m"])
+# test mean productivity between m and other areas
+t.test(c_dat$prod[c_dat$m=="y"],c_dat$prod[c_dat$m=="n"])
+# test between M and area with highest mean (qr): not significant
 t.test(c_dat$prod[c_dat$area_name=="m"],c_dat$prod[c_dat$area_name=="qr"])
+# test between M and loweset mean (l): significant
 t.test(c_dat$prod[c_dat$area_name=="m"],c_dat$prod[c_dat$area_name=="l"])
+# test between highest (qr) and lowest (l): significant
 t.test(c_dat$prod[c_dat$area_name=="qr"],c_dat$prod[c_dat$area_name=="l"])
 
 # M time series plot
@@ -173,33 +165,77 @@ Trying GAMMs
 # # https://stats.stackexchange.com/questions/116770/reml-or-ml-to-compare-two-mixed-effects-models-with-differing-fixed-effects-but?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
 # # thread suggests using REML because it does a better job with random effects on just your final model for inference and prediction
 
-#concurv_comb<- concurvity(gam_combined, full=FALSE)
-# Remove variables with >0.6 estimated concurvity (??)
-# # Not sure I should have aspect, wind, and solar in same model
-# # Use model selection for this?
 
-gam_c_global <- gam(prod~s(pa_ratio)+s(mean_slope)+ s(adjust_mean_elev) +s(mean_aspect, bs="cc") +s(mean_solar) +s(mean_wind)+s(flood_risk_trans)+skua50_yn+season+s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+# Starting with model with all variables of interest and season interaction
+# First create table with data to hold out from model fitting
+# Select counts from subcol with less than 2 counts
+# want to used the scaled data for this
+
+# use subcol that only have one count?
+
+# just select random rows in data frame
+# filter for just croz
+c_dat_scale <- all_dat_scale%>%
+  filter(col=="croz")
+
+set.seed(13)
+c_hold_index <- sample(1:nrow(c_dat_scale), 30,replace=FALSE)
+
+c_dat_mod <-c_dat_scale[-c_hold_index,]
+c_dat_hold <- c_dat_scale[c_hold_index,]
+
+k=6
+gam_c_globalx <- gam(prod~s(area,by=season,k=k)+ s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k)+s(adjust_mean_elev,by=season,k=k)+s(mean_aspect, by=season,k=k, bs="cc") + +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=c_dat_mod, select=TRUE, method="ML")
+
+summary(gam_c_globalx)
+anova(gam_c_globalx)
+par(mfrow=c())
+plot.gam(gam_c_globalx, pages=2, shade=TRUE, scale=0)
+
+
+# Fit model with no season interactions to compare
+gam_c_global <- gam(prod~s(area) + s(pa_ratio)+s(mean_slope)+ s(adjust_mean_elev) +s(mean_aspect, bs="cc") +s(mean_wind)+s(flood_risk_trans)+skua50_yn+season+s(subcol, bs="re"), data=c_dat_mod, select=TRUE, method="ML")
+
 summary(gam_c_global)
 anova(gam_c_global)
 plot.gam(gam_c_global,pages=1, scale=0, shade=TRUE)
-# can't fit this model with season interactions
+
 gam.vcomp(gam_c_global)
 par(mfrow=c(2,2))
 gam.check(gam_c_global)
 concurvity(gam_c_global, full=FALSE)
 
 
+# check how compare
+AICctab(gam_c_global,gam_c_globalx,nobs=247, base=TRUE, weights=TRUE, logLik=TRUE)
+
+
+
 # interactions of interest
+# other models with interactions of interest
+gam_c_int1 <- gam(prod~s(area) + s(pa_ratio)+ s(pa_ratio, by=skua50_yn)+ ti(area, pa_ratio)+s(mean_slope)+ s(adjust_mean_elev) +s(mean_aspect, bs="cc") +s(mean_wind)+s(flood_risk_trans) + ti(flood_risk_trans, mean_slope)+skua50_yn+season+s(subcol, bs="re"), data=c_dat_mod, select=TRUE, method="ML")
+summary(gam_c_int1)
+plot.gam(gam_c_int1, pages=1,shade=TRUE)
+
+
+
+AICctab(gam_c_global,gam_c_globalx, gam_c_int1,nobs=247, base=TRUE, weights=TRUE, logLik=TRUE)
+
+
+
 #all_dat_scale$skua50_cat <- factor(ifelse(all_dat_scale$skua50==1,"y","n"))
 # tried a skua interaction with pa_ratio. Came out as significant, but main difference was that subcol with high pa_ratio with a skua within 50m has slighty less negative impact. Really not much data at that end though so don't think this is a good idea. Going to drop it.
 
-k=5
-gam_c_globalx <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k)+s(adjust_mean_elev,by=season,k=k)+s(mean_aspect, by=season,k=k, bs="cc") +s(mean_solar, by=season,k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
+all4_list <- all_dat_scale%>%
+  select(subcol,prod)%>%
+  group_by(subcol)%>%
+  summarise(count=n())%>%
+  filter(count==4)
 
-summary(gam_c_globalx)
-anova(gam_c_globalx)
-par(mfrow=c())
-plot.gam(gam_c_globalx, pages=2,scale=0, shade=TRUE)
+
+
+
+
 
 # # season interaction with pa_ratio instead of skua
 # gam_c_globalx2 <- gam(prod~s(pa_ratio, by=season,k=k) +s(mean_slope, by=season,k=k)+s(adjust_mean_elev,by=season,k=k)+s(mean_aspect, by=season,k=k,bs="cc") +s(mean_solar, by=season,k=k) +s(mean_wind, by=season,k=k)+s(flood_risk_trans, by=season,k=k)+ skua50_yn*season + s(subcol, bs="re"), data=all_dat_scale[all_dat_scale$col=="croz",], select=TRUE, method="ML")
@@ -438,17 +474,12 @@ plot.gam(gam_c_simp1_pred, shade=TRUE, pages=1, scale=0, residuals=TRUE)
 
 
 # Predict to held out m subcol ####
-c_newdat <- c_ct_meas%>%
-  dplyr::select(col,season, subcol,prod,area,pa_ratio,mean_slope,adjust_mean_elev,mean_elev,mean_wind,skua50)%>%
-  mutate(season=factor(season))%>%
-# select only one year # remove s3 because it's an outlier
-  filter(season%in%c("1718"),!subcol=="s3",col=="croz",subcol%in%factor(m_index))
-c_dat_hold<- filter(c_dat_hold, !subcol=="n11")
+c_newdat<- cMod_dat[hold_out_index,]
 
-m_pred <- predict.gam(gam_c_simp1_pred,exclude="subcol",newdata=c_dat_hold)
+m_pred <- predict.gam(gam_c_globalx,exclude="subcol",newdata=c_newdat)
 
-rcorr(c_dat_hold$prod,m_pred)
-plot(c_dat_hold$prod,m_pred)
+rcorr(c_newdat$prod,m_pred)
+plot(c_newdat$prod,m_pred)
 
 # predict to M from previous years
 m_dat_old <- c_ct_meas%>%
