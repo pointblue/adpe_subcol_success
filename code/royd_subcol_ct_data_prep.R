@@ -93,35 +93,39 @@ r_geom_14_format<- r_geom_14_raw%>%
   select(FID,subcol, area, perimeter, pa_ratio,flood_risk)%>%
   filter(!is.na(subcol))
 
+r_flow_acc_14_format <- read.csv("data/royds_mean_flow_acc.csv", header=TRUE)%>%
+  select(subcol=SUBCOL, mean_flow_acc= MEAN)
+
 # load aspect stats
-r_aspect_14_raw <- read.csv("data/royds_selected_aspect_corrected.csv", header=TRUE)
+r_aspect_14_raw <- read.csv("data/royds_mean_aspect_corrected.csv", header=TRUE)
 r_aspect_14_format <- r_aspect_14_raw%>%
-  rename(FID=SrcID_Feat)
+  select(subcol=SUBCOL,mean_aspect=MEAN)
 
 r_join <- r_geom_14_format%>%
   full_join(r_aspect_14_format)%>%
   filter(!is.na(subcol))
 
-# Missing aspect for subcol 13, likely because too small to have a whole cell within it. Just going to remove it for now
-
 # load elevation stats
-r_elev_14_raw <- read.csv("data/royds_elev.txt", header=TRUE)
+r_elev_14_raw <- read.csv("data/royds_mean_elev.csv", header=TRUE)
 # reformat
 r_elev_14_format <- r_elev_14_raw%>%
-  select(subcol=royd_subco,mean_elev=MEAN)%>%
+  select(subcol=SUBCOL,mean_elev=MEAN)%>%
   mutate(adjust_mean_elev=mean_elev+47) # elevation of DEM is off by about 47m (I asked PGC about this but I forget the reason they gave me)
 
 # load wind/shade stats and format
-r_wind_14_format<- read.csv("data/royds_wind.txt", header=TRUE)%>%
-  select(subcol=royd_subco,mean_wind=MEAN)
+# r_wind_14_format<- read.csv("data/royds_wind.txt", header=TRUE)%>%
+#   select(subcol=royd_subco,mean_wind=MEAN)
+
+r_windshelt_14_format <- read.csv("data/royds_mean_windshelter100m.csv",header=TRUE)%>%
+  select(subcol=SUBCOL, mean_windshelt=MEAN)
  
 # load slope stats
-r_slope_14_format <- read.csv("data/royds_slope.txt", header=TRUE)%>%
-  select(subcol=royd_subco,mean_slope=MEAN)
+r_slope_14_format <- read.csv("data/royds_mean_slope.csv", header=TRUE)%>%
+  select(subcol=SUBCOL,mean_slope=MEAN)
  
-# load insolation stats
-r_solar_14_format <- read.csv("data/royds_solar.txt")%>%
-  select(subcol=royd_subco, mean_solar=MEAN)
+# # load insolation stats
+# r_solar_14_format <- read.csv("data/royds_solar.txt")%>%
+#   select(subcol=royd_subco, mean_solar=MEAN)
 
 # Load skua data
 r_skua50_format <- read.csv("data/royds_skua_50m.csv")%>%
@@ -135,7 +139,7 @@ r_skua50_format <- read.csv("data/royds_skua_50m.csv")%>%
 # 
 # # combine all 2014 measurement data
 
-r_list_14 <- list(r_geom_14_format, r_aspect_14_format,r_slope_14_format,r_elev_14_format,r_wind_14_format,r_solar_14_format, r_skua50_format)
+r_list_14 <- list(r_geom_14_format, r_flow_acc_14_format,r_aspect_14_format,r_slope_14_format,r_elev_14_format,r_windshelt_14_format, r_skua50_format)
 r_all_meas_14 <- as.data.frame(r_list_14[1])
 for(i in 1:(length(r_list_14)-1)){
   a = data.frame(r_list_14[i+1])

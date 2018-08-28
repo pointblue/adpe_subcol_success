@@ -59,13 +59,14 @@ m_ad_1617_raw <- read.csv("Z:/Informatics/S031/S0311617/croz1617/chick counts/ad
 # calculate average count
 m_ad_1617_format<- m_ad_1617_raw%>%
   group_by(subcolony)%>%
-  summarize(active_ct=mean(activenests,na.rm=TRUE), occ_ct=mean(occupiedterritories,na.rm=TRUE), tot_ct=mean(totalindividuals,na.rm=TRUE))%>%
+  dplyr::summarize(active_ct=mean(activenests,na.rm=TRUE), occ_ct=mean(occupiedterritories,na.rm=TRUE),
+            tot_ct=mean(totalindividuals,na.rm=TRUE))%>%
   # change all subcol alphas to lowercase
   mutate(season="1617",col="croz",area_name = "m", subcol=tolower(paste("m",subcolony,sep="")))%>%
   # remove empty row
   filter(!active_ct==(is.na(active_ct)))%>%
   # remove extra subcol column
-  select(-subcolony)
+  dplyr::select(-subcolony)
 
 # m21 and m24 counted together for chick count so adding nest count together
 m_ad_1617_format[m_ad_1617_format$subcol=="m21",c("active_ct","occ_ct","tot_ct")] <- colSums(m_ad_1617_format[m_ad_1617_format$subcol%in%c("m21","m24"),c("active_ct","occ_ct","tot_ct")])
@@ -78,7 +79,7 @@ m_ad_1617_format[m_ad_1617_format$subcol=="m21","subcol"]<-"m21-24"
 m_ch_1617_raw <- read.csv("Z:/Informatics/S031/S0311617/croz1617/chick counts/chickcount_1617.csv", header=TRUE)
 m_ch_1617_format<- m_ch_1617_raw%>%
   group_by(Subcolony)%>%
-  summarize(ch_ct=mean(count,na.rm=TRUE))%>%
+  summarise(ch_ct=mean(count,na.rm=TRUE))%>%
   mutate(season="1617",col="croz",area_name = "m", subcol=paste("m",Subcolony,sep=""))%>%
   mutate(subcol=plyr::mapvalues(subcol, 
                                 from = c("m24-21"),
@@ -86,7 +87,7 @@ m_ch_1617_format<- m_ch_1617_raw%>%
   #Remove empty row
   filter(!ch_ct==(is.na(ch_ct)))%>%
   # Remove extra subcol column
-  select(-Subcolony)
+  dplyr::select(-Subcolony)
 
 # join 1617 M adult and chick counts
 m_1617_join <- m_ad_1617_format%>%
@@ -103,7 +104,7 @@ sc_1617_raw <- read.csv("Z:/Informatics/S031/S0311617/croz1617/Subcolonycounts/c
 # format count to match
 sc_1617_format <- sc_1617_raw%>%
   group_by(subcol_id)%>%
-  summarize(active_ct=mean(active,na.rm=TRUE), occ_ct=mean(occupied,na.rm=TRUE), ch_ct=mean(ch_ct,na.rm=TRUE))%>%
+  summarise(active_ct=mean(active,na.rm=TRUE), occ_ct=mean(occupied,na.rm=TRUE), ch_ct=mean(ch_ct,na.rm=TRUE))%>%
   rename(subcol=subcol_id)%>%
   mutate(season="1617",prod= ch_ct/active_ct,col="croz",area_name = stringr::str_extract(subcol,"[a-z]+"), subcol=as.character(subcol))%>%
   # fix a couple area names and subcol names
@@ -144,12 +145,12 @@ m_ad_1718_raw <- read.csv("Z:/Informatics/S031/S0311718/croz1718/chick counts/ad
 # calculate average count
 m_ad_1718_format<- m_ad_1718_raw%>%
   group_by(subcolony)%>%
-  summarize(active_ct=mean(activenests,na.rm=TRUE), occ_ct=mean(occupiedterritories,na.rm=TRUE), tot_ct=mean(totalindividuals,na.rm=TRUE))%>%
+  summarise(active_ct=mean(activenests,na.rm=TRUE), occ_ct=mean(occupiedterritories,na.rm=TRUE), tot_ct=mean(totalindividuals,na.rm=TRUE))%>%
   mutate(season="1718",col="croz",area_name = "m", subcol=tolower(paste("m",subcolony,sep="")))%>%
   # remove empty row
   filter(!active_ct==(is.na(active_ct)))%>%
   # remove extra subcol column
-  select(-subcolony)
+  dplyr::select(-subcolony)
 
 # m21 and m24 counted together for chick count so adding nest count together
 m_ad_1718_format[m_ad_1718_format$subcol=="m21",c("active_ct","occ_ct","tot_ct")] <- colSums(m_ad_1718_format[m_ad_1718_format$subcol%in%c("m21","m24"),c("active_ct","occ_ct","tot_ct")])
@@ -163,7 +164,7 @@ m_ad_1718_format[m_ad_1718_format$subcol=="m21","subcol"]<-"m21-24"
 m_ch_1718_raw <- read.csv("Z:/Informatics/S031/S0311718/croz1718/chick counts/chickcount_1718.csv", header=TRUE)
 m_ch_1718_format<- m_ch_1718_raw%>%
   group_by(Subcolony)%>%
-  summarize(ch_ct=mean(count,na.rm=TRUE))%>%
+  summarise(ch_ct=mean(count,na.rm=TRUE))%>%
   mutate(season="1718",col="croz",area_name = "m", subcol=tolower(paste("m",Subcolony,sep="")))%>%
   mutate(subcol=plyr::mapvalues(subcol, 
                                 from = c("m21/24","m16/22"),
@@ -171,7 +172,7 @@ m_ch_1718_format<- m_ch_1718_raw%>%
   #Remove empty row
   filter(!ch_ct==(is.na(ch_ct)))%>%
   # Remove extra subcol column
-  select(-Subcolony)
+  dplyr::select(-Subcolony)
 
 # join 1718 M adult and chick counts
 m_1718_join <- m_ad_1718_format%>%
@@ -184,7 +185,7 @@ sc_1718_raw <- read_csv("Z:/Informatics/S031/S0311718/croz1718/subcolonycounts/c
 # format count to match
 sc_1718_format <- sc_1718_raw%>%
   group_by(subcol_id)%>%
-  summarize(active_ct=mean(active,na.rm=TRUE), occ_ct=mean(occupied,na.rm=TRUE), ch_ct=mean(ch_ct, na.rm=TRUE))%>%
+  summarise(active_ct=mean(active,na.rm=TRUE), occ_ct=mean(occupied,na.rm=TRUE), ch_ct=mean(ch_ct, na.rm=TRUE))%>%
   rename(subcol=subcol_id)%>%
   mutate(season="1718",prod= ch_ct/active_ct,col="croz",area_name = stringr::str_extract(subcol,"[a-z]+"))%>%
   mutate(subcol=plyr::mapvalues(subcol, 
@@ -228,7 +229,7 @@ wb_ct <- read_csv("data/wb_ad_ch_ct_1415_1718.csv")
  wb_ct_format <- wb_ct%>%
   mutate(SEASON=as.character(SEASON),prod=CHICKS/ACTIVE,COLONY=tolower(COLONY),SUBCOL=tolower(SUBCOL),area_name="b")%>%
   rename(season=SEASON, active_ct=ACTIVE, ch_ct=CHICKS,col=COLONY,subcol=SUBCOL)%>%
-  select(-X8,-X9,-X10, -X11)%>%
+  dplyr::select(-X8,-X9,-X10, -X11)%>%
   filter(!is.na(col))
 
 
@@ -237,7 +238,7 @@ all_ct <- full_join(m_all_ct,oth_ct_format)%>%
   full_join(all_1617)%>%
   full_join(all_1718)%>%
   full_join(wb_ct_format)%>%
-  select(col, season, subcol, active_ct, ch_ct,prod, area_name)%>%
+  dplyr::select(col, season, subcol, active_ct, ch_ct,prod, area_name)%>%
   # rename m41 to m6a (I swear I already did this somewhere else!!)
   # rename s2 to s2-4 because counted them together on photo
   # d9-11 counted together in 1617 but labeled as d10-11
@@ -273,58 +274,82 @@ all_ct <- full_join(m_all_ct,oth_ct_format)%>%
 # Format subcol measurements ####-------------------------------------------------------------------------------
 #load subcol measures
 # this file contains area, perimeter, perimeter area ratio, and flood risk for all subcolonies
-geom_flood_14_raw<- read_csv("data/croz_selected_geom.txt")
-# format
-geom_flood_14_format<- geom_flood_14_raw%>%
-  select(FID,subcol, area, perim, pa_ratio,flood_risk)
-
+ geom_flood_14_raw<- read_csv("data/croz_selected_geom_v3.txt")
+ # format
+ geom_flood_14_format<- geom_flood_14_raw%>%
+   dplyr::select(FID,subcol, area, perim, pa_ratio,flood_risk=SUM_AREA)
+ 
+ # flow acc
+ flow_acc <- read_csv("data/croz_mean_flow_acc_snow.csv")%>%
+   dplyr::select(subcol=SUBCOL, flow_acc=MEAN)%>%
+   mutate(flow_acc_log1p=log1p(flow_acc))
+ hist(flow_acc$flow_acc_log1p)
+ hist(flow_acc$flow_acc)
+ 
+ 
 # load aspect stats
-aspect_14_raw <- read.csv("data/croz_selected_aspect_corrected.csv", header=TRUE)
+aspect_14_raw <- read_csv("data/croz_selected_mean_aspect_corr.txt")
 aspect_14_format <- aspect_14_raw%>%
-  rename(FID=SRCID_FEAT)
+  dplyr::select(subcol, mean_aspect=MEAN)
 
 # load elevation stats
-elev_14_raw <- read.csv("data/croz_selected_elev.txt", header=TRUE)
+elev_14_raw <- read_csv("data/croz_selected_mean_elev.txt")
 # reformat
 elev_14_format <- elev_14_raw%>%
-  select(SUBCOL,MEAN)%>%
-  rename(subcol=SUBCOL, mean_elev=MEAN)%>%
+  dplyr::select(subcol,mean_elev=MEAN)%>%
   mutate(adjust_mean_elev=mean_elev+47)
 
 # load shade stats
-wind_14_raw <- read.csv("data/croz_selected_wind.txt", header=TRUE)
+wind_14_raw <- read_csv("data/croz_selected_mean_wind.txt")
 # reformat
 wind_14_format<- wind_14_raw%>%
-  select(SUBCOL,MEAN)%>%
-  rename(subcol=SUBCOL, mean_wind=MEAN)
+  dplyr::select(subcol,mean_wind=MEAN)
+
+# load windshelter
+windshelt_14_format <-read_csv("data/croz_selected_mean_windshelter.txt")%>%
+  dplyr::select(subcol,mean_windshelt=MEAN)
+
+windshelt_14_format2 <-read_csv("data/croz_selected_mean_windshelt_100mpi4pi12.txt")%>%
+  dplyr::select(subcol=SUBCOL,mean_windshelt100m=MEAN)
+
+windshelt_14_format3 <-read_csv("data/croz_selected_mean_windshelt_100mpi8pi8.txt")%>%
+  dplyr::select(subcol=SUBCOL,mean_windshelt100mp8=MEAN)
+  
  
 # load slope stats
-slope_14_raw <- read.csv("data/croz_selected_slope.txt", header=TRUE)
+slope_14_raw <- read_csv("data/croz_selected_mean_slope.txt")
 slope_14_format <- slope_14_raw%>%
-  select(SUBCOL,MEAN)%>%
-  rename(subcol=SUBCOL,mean_slope=MEAN)
+  dplyr::select(subcol,mean_slope=MEAN)
 
 # load insolation stats
-solar_14_raw <- read.csv("data/croz_selected_solar.txt")
-solar_14_format <- solar_14_raw%>%
-  select(SUBCOL, MEAN)%>%
-  rename(subcol=SUBCOL, mean_solar=MEAN)
+#solar_14_raw <- read.csv("data/croz_selected_solar.txt")
+#solar_14_format <- solar_14_raw%>%
+ # select(SUBCOL, MEAN)%>%
+  #rename(subcol=SUBCOL, mean_solar=MEAN)
 
 # Load skua data
-skua50_raw <- read.csv("data/croz_skua_50m.txt")
+skua50_raw <- read_csv("data/croz_selected_near_skua50.txt")
 # format
 skua50_format <- skua50_raw%>%
-  select(SUBCOLID, NEAR_RANK)%>%
-  rename(FID=SUBCOLID, skua50=NEAR_RANK)
+  dplyr::select(FID=IN_FID, skua50=NEAR_DIST)%>%
+  mutate(skua50=1)
 
-skua100_raw <- read.csv("data/croz_skua_100m.txt")
-skua100_format <- skua100_raw%>%
-  select(SUBCOLID, NEAR_RANK)%>%
-  rename(FID=SUBCOLID, skua100=NEAR_RANK)
+# Load dist to boundary data
+dist_bound <- read_csv("data/croz_selected_near_outerbound.txt")%>%
+  dplyr::select(FID=IN_FID, dist_outer=NEAR_DIST)
+
+# Load dist to nest 10 subcol data 
+near_subcol <- read_csv("data/croz_selected_near_subcol.txt")
+near_subcol_mean <- near_subcol%>%
+  dplyr::select(FID=IN_FID,dist=NEAR_DIST,rank=NEAR_RANK)%>%
+  group_by(FID)%>%
+  dplyr::slice(-1)%>%
+  summarise(mean_n10_dist = mean(dist))
+hist(near_subcol_mean$mean_n10_dist)
+
 
 # # combine all 2014 measurement data
-
-list_14 <- list(geom_flood_14_format, aspect_14_format,slope_14_format,elev_14_format,wind_14_format,solar_14_format, skua50_format,skua100_format)
+list_14 <- list(geom_flood_14_format, aspect_14_format,slope_14_format,elev_14_format,wind_14_format, windshelt_14_format,windshelt_14_format2,windshelt_14_format3,skua50_format, flow_acc, dist_bound,near_subcol_mean)
 all_meas_14 <- as.data.frame(list_14[1])
 for(i in 1:(length(list_14)-1)){
   a = data.frame(list_14[i+1])
@@ -339,57 +364,58 @@ all_meas_14_format<-all_meas_14%>%
 # 
 
 all_meas_ct <- all_ct%>%
-  inner_join(all_meas_14_format)
-# looks like losing some data in this join
+    inner_join(all_meas_14_format)
+# checking what data getting dropped by this join:
 anti_join(all_ct,all_meas_ct)
+# looks like losing some data in this join but most don't have complete data from years of interest:
 # Subcolonies with full count data (ad and chick counts from at least one year 1415-1718) that appear to be missing measurement data:
 # c40 (only counted 1617), fbeach_2 (doesn't appear on aerial photo), g46 (counted all 4 years), l19 (only counted 1718), m19, m20 (lots of msubcol that don't have counts from last 4 years), 
 # qr157 (doen't look like same area was counted in 1415 and 1516, no counts from 1617 or 1718)
 # The only one that would be nice to include is g46 but not worth redoing all spatial stats for that so leaving out for now
 # 
  
+
 # Missing a lot of raster based attributes for subcol
 # also it looks like I lost g58 in the raster conversion. It's a small subcol right next to g23 
 # so I'm leaving it out for now
 miss <- all_meas_ct%>%
-  filter(is.na(mean_solar))%>%
+  filter(is.na(mean_slope))%>%
   arrange(subcol)%>%
   distinct(subcol)
 
 # Not sure how to do this other than one at a time
 miss[1,] # d11
-all_meas_ct[all_meas_ct$subcol=="d11",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="d9-11",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")][1,]  
+all_meas_ct[all_meas_ct$subcol=="d11",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="d9-11",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")][1,]  
 miss[2,] #d24: replace with values from d24_1 (split from d24 but should be the same)
-all_meas_ct[all_meas_ct$subcol=="d24",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="d24_1",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")][1,]  
+all_meas_ct[all_meas_ct$subcol=="d24",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="d24_1",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")][1,]  
 miss[3,] #d47-48: replace with values from d47
-all_meas_ct[all_meas_ct$subcol=="d47-48",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="d47",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")][1,]  
+all_meas_ct[all_meas_ct$subcol=="d47-48",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="d47",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")][1,]  
 miss[4,] #d9: replace with values from d9-11
-all_meas_ct[all_meas_ct$subcol=="d9",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="d9-11",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")][1,]  
-miss[5,] #g58, no measures, skipping
-miss[6,] #m21-24, replace with m21
-all_meas_ct[all_meas_ct$subcol=="m21-24",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="m21",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")][1,]  
-miss[7,] #p22-23, replace with p22
-all_meas_ct[all_meas_ct$subcol=="p22-23",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="p22",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")][1,]  
-miss[8,] #p44_1, replace with p44
-all_meas_ct[all_meas_ct$subcol=="p44_1",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="p44",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")][1,]  
-miss[9,] #p44_2, replace with p44
-all_meas_ct[all_meas_ct$subcol=="p44_2",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="p44",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_solar")][1,]  
+all_meas_ct[all_meas_ct$subcol=="d9",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="d9-11",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")][1,]  
+miss[5,] #m21-24, replace with m21
+all_meas_ct[all_meas_ct$subcol=="m21-24",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="m21",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")][1,]  
+miss[6,] #p22-23, replace with p22
+all_meas_ct[all_meas_ct$subcol=="p22-23",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="p22",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")][1,]  
+miss[7,] #p44_1, replace with p44
+all_meas_ct[all_meas_ct$subcol=="p44_1",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="p44",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")][1,]  
+miss[8,] #p44_2, replace with p44
+all_meas_ct[all_meas_ct$subcol=="p44_2",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="p44",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_wind","mean_windshelt","flow_acc", "flow_acc_log1p","dist_outer","mean_n10_dist")][1,]  
 
 
-# fill in NA in skua variables with 0
+# fill in NA in skua and flood_risk variables with 0
 all_meas_ct[is.na(all_meas_ct$skua50), "skua50"]<- 0
-all_meas_ct[is.na(all_meas_ct$skua100), "skua100"]<- 0
+all_meas_ct[is.na(all_meas_ct$flood_risk), "flood_risk"]<- 0
 
 # # write data to file
-write.csv(all_meas_ct, "data/croz_selected_meas_ct_all.csv", row.names = FALSE)
+write.csv(all_meas_ct, "data/croz_selected_meas_ct_all_v8.csv", row.names = FALSE)
 
 # # create table with mean prod anomaly by subcolony
 # subcol_anom <- aggregate(ann_prod_anom~subcol,data=all_ct_anom, FUN=mean)
