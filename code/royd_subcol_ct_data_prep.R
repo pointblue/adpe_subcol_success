@@ -93,8 +93,13 @@ r_geom_14_format<- r_geom_14_raw%>%
   select(FID,subcol, area, perimeter, pa_ratio,flood_risk)%>%
   filter(!is.na(subcol))
 
-r_flow_acc_14_format <- read.csv("data/royds_mean_flow_acc.csv", header=TRUE)%>%
-  select(subcol=SUBCOL, mean_flow_acc= MEAN)
+# r_flow_acc_14_format <- read.csv("data/royds_mean_flow_acc.csv", header=TRUE)%>%
+#   select(subcol=SUBCOL, mean_flow_acc= MEAN)%>%
+#   mutate(flow_acc_snow_log1p=log1p(flow_acc_snow))
+
+r_flow_acc_14_snowformat <- read.csv("data/royds_mean_flow_acc_snow_v2.csv", header=TRUE)%>%
+  select(subcol=SUBCOL, flow_acc= MEAN)%>%
+  mutate(flow_acc_log1p=log1p(flow_acc),flow_acc_log=log(flow_acc))
 
 # load aspect stats
 r_aspect_14_raw <- read.csv("data/royds_mean_aspect_corrected.csv", header=TRUE)
@@ -110,14 +115,17 @@ r_elev_14_raw <- read.csv("data/royds_mean_elev.csv", header=TRUE)
 # reformat
 r_elev_14_format <- r_elev_14_raw%>%
   select(subcol=SUBCOL,mean_elev=MEAN)%>%
-  mutate(adjust_mean_elev=mean_elev+47) # elevation of DEM is off by about 47m (I asked PGC about this but I forget the reason they gave me)
+  mutate(adjust_mean_elev=mean_elev+46) # elevation of DEM is off by about 46m (I asked PGC about this but I forget the reason they gave me)
 
 # load wind/shade stats and format
 # r_wind_14_format<- read.csv("data/royds_wind.txt", header=TRUE)%>%
 #   select(subcol=royd_subco,mean_wind=MEAN)
 
 r_windshelt_14_format <- read.csv("data/royds_mean_windshelter100m.csv",header=TRUE)%>%
-  select(subcol=SUBCOL, mean_windshelt=MEAN)
+  select(subcol=SUBCOL, mean_windshelt100m=MEAN)
+
+r_windshelt_14_300mformat <- read.csv("data/royds_mean_windshelter300m.csv",header=TRUE)%>%
+  dplyr::select(subcol=SUBCOL, mean_windshelt300m=MEAN)
  
 # load slope stats
 r_slope_14_format <- read.csv("data/royds_mean_slope.csv", header=TRUE)%>%
@@ -139,7 +147,7 @@ r_skua50_format <- read.csv("data/royds_skua_50m.csv")%>%
 # 
 # # combine all 2014 measurement data
 
-r_list_14 <- list(r_geom_14_format, r_flow_acc_14_format,r_aspect_14_format,r_slope_14_format,r_elev_14_format,r_windshelt_14_format, r_skua50_format)
+r_list_14 <- list(r_geom_14_format,r_flow_acc_14_snowformat,r_aspect_14_format,r_slope_14_format,r_elev_14_format,r_windshelt_14_format,r_windshelt_14_300mformat, r_skua50_format)
 r_all_meas_14 <- as.data.frame(r_list_14[1])
 for(i in 1:(length(r_list_14)-1)){
   a = data.frame(r_list_14[i+1])
@@ -163,5 +171,5 @@ anti_join(r_ct_all4,r_all_meas_ct)
 
 # 
 # write data to file
-write.csv(r_all_meas_ct, "data/royds_selected_meas_ct_all.csv", row.names = FALSE)
+write.csv(r_all_meas_ct, "data/royds_selected_meas_ct_all_v6.csv", row.names = FALSE)
 
