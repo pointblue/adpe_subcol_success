@@ -8,6 +8,7 @@
 library("XLConnect")
 library(dplyr)
 library(tidyr)
+library(stringr)
 
 # Start loading in data----
 # want to end up with one table for chick counts and one table for adult counts 
@@ -223,6 +224,16 @@ ct_1718_format <- ct_1718%>%
   mutate(subcol=tolower(subcol),col="royds",prod=ch_ct/active_ct, area_name=NA, season="1718")%>%
   mutate(subcol=plyr::mapvalues(subcol, from=c("14a/b","19 (wb1)","11/12"), to=c("14a-b", "19", "11-12")))
 
+# 1819
+ct_1819<-read.csv("Z:/Informatics/S031/S0311819/royds1819/Adult&Chick counts/royds_annual_prod_1819_v2.csv")%>%
+  mutate(season=as.character(season))
+
+# ct_1819_format <- ct_1819%>%
+#   select(subcol=Subcolony, active_ct =Active.Territories, ch_ct=chicks)%>%
+#   mutate(subcol=tolower(subcol),col="royds",prod=ch_ct/active_ct, area_name=NA, season="1819")%>%
+#   mutate(subcol=plyr::mapvalues(subcol, from=c("14a/b","19 (wb1)","11/12"), to=c("14a-b", "19", "11-12")))
+
+
 
 r_ct_all<- ct_0304_format%>%
   full_join(ct_0506_format)%>%
@@ -238,6 +249,7 @@ r_ct_all<- ct_0304_format%>%
   full_join(ct_1516_format)%>%
   full_join(ct_1617_format)%>%
   full_join(ct_1718_format)%>%
+  full_join(ct_1819)%>%
   arrange(subcol)
 
 # Clean up joined table
@@ -252,6 +264,6 @@ r_ct_all_cln <- r_ct_all%>%
 
 
 # Write table
-write.csv(r_ct_all_cln,"data/royds_all_ct_clean_thru1718.csv", row.names = FALSE)
+write.csv(r_ct_all_cln,"Z:/Informatics/S031/analyses/aschmidt/NSF_2019_penguin_proposal/data/royds_all_ct_clean_thru1819.csv", row.names = FALSE)
 
 

@@ -318,8 +318,8 @@ elev_14_format <- elev_14_raw%>%
 #   dplyr::select(subcol,mean_wind=MEAN)
 
 # load windshelter
-windshelt_14_format <-read_csv("data/croz_selected_mean_windshelt_300m.txt")%>%
-  dplyr::select(subcol=SUBCOL,mean_windshelt300m=MEAN)
+windshelt_14_format <-read_csv("data/croz_selected_mean_windshelt_300m_2pi_v2.1.txt")%>%
+  dplyr::select(subcol,mean_windshelt300m=MEAN)
 
 # windshelt_14_format2 <-read_csv("data/croz_selected_mean_windshelt_100mpi4pi12.txt")%>%
 #   dplyr::select(subcol=SUBCOL,mean_windshelt100m=MEAN)
@@ -437,7 +437,7 @@ all_meas_ct[is.na(all_meas_ct$skua50), "skua50"]<- 0
 all_meas_ct[is.na(all_meas_ct$flood_risk), "flood_risk"]<- 0
 
 # # write data to file
-write.csv(all_meas_ct, "data/croz_selected_meas_ct_all_v15.csv", row.names = FALSE)
+write.csv(all_meas_ct, "data/croz_selected_meas_ct_all_v16.csv", row.names = FALSE)
 
 # # create table with mean prod anomaly by subcolony
 # subcol_anom <- aggregate(ann_prod_anom~subcol,data=all_ct_anom, FUN=mean)
