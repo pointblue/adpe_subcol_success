@@ -69,10 +69,11 @@ bqi_crit <- bqi_loc%>%
   slice(n())
 
 # read in predicted productivity raster
-pred_prod<-raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_predict_prod_base_anom_v2.tif")
+# pred_prod<-raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_predict_prod_base_anom_v2.tif")
+pred_prod<-raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_predict_subcol.tif")
 # convert raster to points
 pred_pt <- st_as_sf(rasterToPoints(pred_prod, spatial=TRUE))%>%
-  rename(pred_prod=royds_predict_prod_base_anom_v2)
+  rename(pred_prod=royds_predict_subcol)
 plot(pred_pt)
 # reproject to same a bqi locations
 pred_pt <- st_transform(pred_pt,crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
@@ -94,10 +95,11 @@ bqi_prod <- st_join(bqi_sp,pred_pt["pred_prod"],
 
 ggplot(bqi_prod,aes(pred_prod,BQI_A))+
   geom_point()+
-  xlab("Predicted habitat quality")+
+  xlab("Predicted subcolony quality")+
   ylab("BQI")+
   geom_smooth(method = "lm")
 
-write.csv(bqi_prod, "Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/royds_bqi_pred_prod_loc.csv", row.names = FALSE)
+Hmisc::rcorr(bqi_prod$pred_prod,bqi_prod$BQI_A)
+write.csv(bqi_prod, "Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/royds_bqi_pred_subcol_loc.csv", row.names = FALSE)
 
 
