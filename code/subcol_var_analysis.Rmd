@@ -17,19 +17,14 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r load libraries and data}
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(readr)
-library(mgcv)
-# library(bbmle)
-library(Hmisc)
-#library(raster)
-library(stringr)
-library(gridExtra)
-library(viridis)
-# library(dismo)
-# library(gbm)
+
+list.of.packages <- c("tidyverse", "mgcv","Hmisc", "stringr","gridExtra","nlme", "raster","sf","nngeo","bbmle")
+# compare to existing packages
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+# install missing packages
+if(length(new.packages)>0) {install.packages(new.packages)}
+# load required packages
+lapply(list.of.packages, library, character.only = TRUE)
 
 #Set working directory
 setwd("Z:/Informatics/S031/analyses/aschmidt/subcol_var")
@@ -50,10 +45,10 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
 
 # read in count data files with subcolony attributes (created by croz(royd)_subcol_ct_data_prep.R) ####
 # Crozier
-c_ct_meas <- read.csv("data/croz_selected_meas_ct_all_v15.csv")
+c_ct_meas <- read_csv("data/croz_selected_meas_ct_all_v16.csv")
 
 # Royds
-r_ct_meas <- read_csv("data/royds_selected_meas_ct_all_v8.csv")
+r_ct_meas <- read_csv("data/royds_selected_meas_ct_all_v9.csv")
 
 
 ```
@@ -66,32 +61,32 @@ Format data for modeling
 # so holding out some of the M subcolonies to predict to and correlate prediction with BQI would be good?
 
 c_dat <- c_ct_meas%>%
-  dplyr::select(-FID,-mean_elev, -perim)%>%
+  dplyr::select(-FID,-mean_elev, perim)%>%
   mutate(season=factor(season),subcol=factor(subcol), m=ifelse(area_name=="m","y","n"), skua50_yn=factor(ifelse(skua50==1,"y","n")),skua50=factor(skua50), mean_acr=ifelse(mean_acr>2.02,NA,mean_acr),mean_acr_log=log(mean_acr))%>%
 # select only years 1415-1718  # remove s3 because it's an outlier
-  filter(season%in%c("1415","1516","1617","1718"),!subcol=="s3",!prod=="NA"&!is.na(pa_ratio),!active_ct<5)%>%
-  rename(mean_windshelt=mean_windshelt300m)
+  filter(season%in%c("1415","1516","1617","1718"),!subcol=="s3",!prod=="NA"&!is.na(pa_ratio))%>%
+  dplyr::rename(mean_windshelt=mean_windshelt300m, perimeter=perim)
 
 # Format Royds data
 r_dat <- r_ct_meas%>%
-  dplyr::select(-FID,-perimeter,-mean_elev)%>%
-  mutate(season=factor(season),subcol=factor(subcol),col=factor(col),skua50_yn=factor(ifelse(skua50==1,"y","n")),skua50=factor(skua50))%>%
+  dplyr::select(-FID,perimeter,-mean_elev)%>%
+  mutate(season=factor(season),subcol=factor(subcol),col=factor(col),skua50_yn=factor(ifelse(skua50==1,"y","n")),skua50=factor(skua50),area_name=as.character(area_name))%>%
   # active count from 13 in 1617 looks off, exclude
   filter(!is.na(active_ct), !active_ct==0,!(subcol=="13"&season=="1617"))%>%
-  rename(mean_windshelt=mean_windshelt300m)%>%
-  select(-area_name)
+  dplyr::rename(mean_windshelt=mean_windshelt300m)
   
 # one slope value for Royds 1b seems off (unlikely it's a 50deg slope)
-# # Setting it to value from other overpalling pixel = Pixel value	25.368334
+# Setting it to value from other overpalling pixel = Pixel value	25.368334
 # setting slope or 1b to value for other pixel that overlaps (more reasonable)
-r_dat[r_dat$subcol=="1b","mean_slope"]=25.3683  
+r_dat[r_dat$subcol=="1b","mean_slope"]=25.3683
 # crazy slope causes other variables to be off also, need to reset these also to next pixel
-# Flow acc change to 6
+# Flow acc change to 0
 r_dat[r_dat$subcol=="1b","flow_acc"]=0
 r_dat[r_dat$subcol=="1b","flow_acc_log1p"]=log1p(0)
-# # wind shelt to 0.1097
-# 0.1538
-r_dat[r_dat$subcol=="1b","mean_windshelt"]=0.1538
+# # wind shelt to -0.016
+# windshelt 300m 2pi = 0.0262
+# windshelt 300m 14pi8 = 0.1538
+r_dat[r_dat$subcol=="1b","mean_windshelt"]=0.0262
 # aspect to 253.100
 r_dat[r_dat$subcol=="1b","mean_aspect"]=253.100
 # elevation to -45.248047+47
@@ -103,8 +98,8 @@ r_dat[r_dat$subcol=="1b","adjust_mean_elev"]=-45.248047+46
 # Combine data
 all_dat <- c_dat%>%
   full_join(r_dat)%>%
-  mutate(subcol=as.factor(subcol), col=as.factor(col),skua50_yn=factor(skua50_yn), season=factor(season))%>%
-  filter(!active_ct<5)
+  mutate(subcol=as.factor(subcol), col=as.factor(col),skua50_yn=factor(skua50_yn), season=factor(season))
+
 
 # scale all data to make model fitting easier
 all_dat_scale <- all_dat%>%
@@ -133,22 +128,22 @@ subcol_attr <- all_dat%>%
   dplyr::select(-flood_risk,-active_ct,-ch_ct,-prod, -skua50_yn,-flow_acc_log,-mean_windshelt100m,-mean_acr,-mean_acr_log,-flow_acc)%>%
   # dplyr::slice(1)%>%
   gather(attr,value=measurement,-col,-season,-area_name,-subcol)%>%
-  mutate(measurement=as.numeric(measurement),attr=factor(attr, labels=c("Elevation","Area","Flow accumulation","AreaM","Aspect","Slope","Wind shelter","Perim/Area ratio","Skua 50m")))%>%
+  mutate(measurement=as.numeric(measurement),attr=factor(attr, labels=c("Elevation (m)","Area (m2)","Flow accumulation","AreaM","Aspect (deg)","Slope (deg)","Wind shelter index","Perim/Area ratio", "Skua 50m")))%>%
   filter(!is.na(measurement))
 
 # label panels with significant difference
-attr_sig <- data.frame(attr=factor(c("Elevation","Area","Flow accumulation","Aspect","Slope","Wind shelter","Perim/Area ratio"), levels=c("Elevation","Area","Flow accumulation","AreaM","Aspect","Slope","Wind shelter","Perim/Area ratio")), sig=as.character(c("*","*","*","*","","*","*")))
+attr_sig <- data.frame(attr=factor(c("Elevation (m)","Area (m2)","Flow accumulation","Aspect (deg)","Slope (deg)","Wind shelter index","Perim/Area ratio"), levels=c("Elevation (m)","Area (m2)","Flow accumulation","AreaM","Aspect (deg)","Slope (deg)","Wind shelter index","Perim/Area ratio")), sig=as.character(c("*","*","*","*","","*","*")))
 
-p_subcol_attr<- subcol_attr%>%
+subcol_attr%>%
   group_by(subcol,attr)%>%
   dplyr::slice(1)%>%
   filter(!attr=="Skua 50m")%>%
 ggplot(aes(attr,measurement, fill=col,color=col))+
   # geom_histogram(bins=20, colour="white")+
-  facet_wrap(~attr,scales="free", strip.position = "bottom")+
+  facet_wrap(~attr,scales="free",strip.position = "left")+
     geom_boxplot(width=0.5,alpha = 0.7)+
   # geom_hist(subset=.(attr=="Skua 50m"), bins=2)+
-  ylab("Measurement")+
+  ylab("")+
   xlab("")+
   # scale_fill_viridis(discrete=TRUE)+
   scale_color_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
@@ -156,46 +151,17 @@ ggplot(aes(attr,measurement, fill=col,color=col))+
   guides(fill=guide_legend(title="Colony"),color=guide_legend(title="Colony"))+
   theme_classic()+
   theme(strip.placement.x = "outside",
+        strip.placement.y="outside",
     strip.background = element_blank(),
                      panel.grid.major = element_blank(),
-                     panel.grid.minor = element_blank(), panel.border=element_blank(),axis.line= element_line(colour = "black"),axis.text.x=element_blank())+
+                     panel.grid.minor = element_blank(), panel.border=element_blank(),axis.line= element_line(colour = "black"),axis.text.x=element_blank(),panel.spacing = unit(1.5, "lines"))+
   guides(fill=guide_legend(title="Colony"))+
   geom_text(data=attr_sig,aes(label=sig),show.legend=FALSE, x=Inf,y=Inf,hjust = 3,
     vjust = 1.5,size=8,inherit.aes = FALSE)
 
-print(p_subcol_attr)
+# Note, added skua panel separately in illustrator because couldn't figure out how to do it easily in R
+# Skua panel: see below
 
-# missing a chunk of code defining cr_skua
-p_skua <- ggplot(cr_skua, aes(col,prop_skua, fill=col))+
-  geom_bar(stat="identity")+
-   xlab("Skua within 50m")+
-  ylab("Proportion of subcolonies")+
-  # scale_fill_viridis(discrete=TRUE)+
-  scale_color_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
-  scale_fill_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
-  guides(fill=guide_legend(title="Colony"),color=guide_legend(title="Colony"))+
-  theme_classic()+
-  theme(strip.placement.x = "outside",
-    strip.background = element_blank(),
-                     panel.grid.major = element_blank(),
-                     panel.grid.minor = element_blank(), panel.border=element_blank(),axis.line= element_line(colour = "black"),axis.text.x=element_blank())+
-  # guides(fill=guide_legend(title="Colony"))+
-  geom_text(data=attr_sig,aes(label=sig),show.legend=FALSE, x=Inf,y=Inf,hjust = 3,
-    vjust = 1.5,size=8,inherit.aes = FALSE)
-print(p_skua)
-  
-# library(gridBase)
-# library(grid)
-# par(mfrow=c(1, 2))
-# plot.new()              
-# vps <- baseViewports()
-# pushViewport(vps$figure)
-# vp1 <-plotViewport(c(3,1,3,1)) ## create new vp with margins
-# vp2 <- plotViewport(c(3,1,3,1))
-# print(p_subcol_attr,vp = vp1)
-# print(p_skua,vp=vp2)
-
-  
 # Tests for differences between the two colonies
 
 pair_dat <-subcol_attr%>%
@@ -228,26 +194,70 @@ n_croz<-length(pair_dat$`Skua 50m`[pair_dat$col=="croz"])
 royds_skua <- sum(pair_dat$`Skua 50m`[pair_dat$col=="royds"])
 n_royds <- length(pair_dat$`Skua 50m`[pair_dat$col=="royds"])
 
-croz_skua/n_croz
+# Having trouble making the skua panel so doingn it manually here
+# data frame with proportions and CI
+prop_skua <- data.frame(croz_skua,n_croz,prop_croz=croz_skua/n_croz,royds_skua,n_royds,prop_royds=royds_skua/n_royds)
+# Proportion margin of error
+#z*sqrt(p(1-p)/n)
+prop_skua$croz_CI <- 1.96*sqrt((prop_skua$prop_croz*(1-prop_skua$prop_croz))/n_croz)
+prop_skua$royds_CI <- 1.96*sqrt((prop_skua$prop_royds*(1-prop_skua$prop_royds))/n_royds)
 
+# test if difference in proportion is significant
 prop.test(x=c(croz_skua,royds_skua),n=c(n_croz,n_royds))
 
+# plot proportions
+prop_skua%>%
+  select(prop_croz,prop_royds)%>%
+  gather(key=col, value=proportion)%>%
+  mutate(CI=c(prop_skua$croz_CI,prop_skua$royds_CI))%>%
+ggplot(aes(col, proportion, fill=col))+ 
+  geom_bar(stat="identity", 
+           position=position_dodge())+
+  geom_errorbar(aes(ymin=proportion-CI, ymax=proportion+CI), width=.1,
+                 position=position_dodge(.9)) +
+  ylab("Proportion of subcolonies \n with skuas w/in 50m")+
+  xlab("")+
+  scale_color_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
+  scale_fill_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
+  # guides(fill=guide_legend(title="Colony"),color=guide_legend(title="Colony"))+
+  theme_classic()+
+  theme(strip.placement.x = "outside",
+        strip.placement.y="outside",
+    strip.background = element_blank(),
+                     panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(), panel.border=element_blank(),axis.line= element_line(colour = "black"),axis.text.x=element_blank(),panel.spacing = unit(1.5, "lines"))+
+  guides(fill=guide_legend(title="Colony"))+
+  geom_text(data=attr_sig,aes(label=sig),show.legend=FALSE, x=Inf,y=Inf,hjust = 3,
+    vjust = 1.5,size=8,inherit.aes = FALSE)
 
+
+
+# plot area vs. perimeter
+all_dat%>%
+  group_by(col,subcol)%>%
+  slice(1)%>%
+  rename(colony=col)%>%
+  ungroup()%>%
+  mutate(ideal_y=2*pi*sqrt(area/pi), r=sqrt(area/pi),ideal_pa=2/r,resid=pa_ratio-ideal_pa)%>%
+ggplot(aes(area,resid))+
+  geom_point(aes(colour=colony))+
+  # geom_line(aes(area,ideal_pa))
+  geom_smooth(method="loess",aes(fill=colony, col=colony))
 
 # Croz and Royds productivity together ####
 # Read in historic royds counts
-r_ct_all <- read.csv("data/royds_all_ct_clean_thru1718.csv",header=TRUE)
+r_ct_all <- read_csv("data/royds_all_ct_clean_thru1718.csv")
 
 cr_count_all <- c_ct_meas%>%
   full_join(r_ct_all)%>%
   dplyr::select(col,subcol,season,prod)%>%
   mutate(season=factor(season,labels=c("2002","2003","2004","2005","2006","2007","2008","2009","2010","2011","2012",
-                                      "2013","2014","2015","2016","2017")))
-#   # dplyr::slice(1)%>%
-#   gather(subcol_attr,value=measurement,-col,-season,-area_name,-subcol)
-# %>%
+                                      "2013","2014","2015","2016","2017")))%>%
+  filter(!is.na(prod))
+
+# Plot time series together (Fig 2.) ####
 ggplot(cr_count_all,aes(season,prod, fill=col, color=col))+
-  geom_boxplot(alpha = 0.7)+
+  geom_boxplot(alpha = 0.7,position = position_dodge(preserve = "single"))+
   ylab("Breeding success (chicks/pair)")+
   xlab("Season")+
   # stat_summary(fun.y=mean, geom="point", 
@@ -256,6 +266,7 @@ ggplot(cr_count_all,aes(season,prod, fill=col, color=col))+
   scale_fill_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
   guides(fill=guide_legend(title="Colony"),color=guide_legend(title="Colony"))+
   theme_classic()
+
 
 # Royds CV
 r_cv_seas<-r_ct_all%>%
@@ -275,32 +286,38 @@ mean(r_ct_all$prod)
 mean(r_cv_seas$mean)
 
 sd(r_ct_all$prod)/mean(r_ct_all$prod)  
+
 # Croz CV
 c_cv_seas<-c_ct_meas%>%
   group_by(season)%>%
   summarise(mean=mean(prod,na.rm=TRUE),sd=sd(prod,na.rm=TRUE))%>%
   mutate(cv=sd/mean)
 mean(c_cv_seas$cv, na.rm=TRUE)
-
 par(mfrow=c(1,1))
 lines(c_cv_seas$season,c_cv_seas$cv,type="o", lwd=2)
-
 sd(c_cv_seas$mean,na.rm=TRUE)/mean(c_cv_seas$mean, na.rm=TRUE)
 sd(c_ct_meas$prod,na.rm=TRUE)/mean(c_ct_meas$prod, na.rm=TRUE) 
 mean(c_ct_meas$prod, na.rm=TRUE)
-# SE of chicks per pair for whole time series
+
+
+# Mean and SE of chicks per pair for whole time series
 sd(c_ct_meas$prod,na.rm=TRUE)/sqrt(length(c_ct_meas$prod)-5) # 5 NA's
 mean(c_dat$prod, na.rm=TRUE)
+# Croz SE
 sd(c_dat$prod)/sqrt(length(c_dat$prod))
-
+# Royds SE
 sd(r_ct_all$prod)/sqrt(length(r_ct_all$prod))
 
+# mean for 4 years of study
+# Royds
 mean(r_dat$prod)
 sd(r_dat$prod)/sqrt(length(r_dat$prod))
-
+# Croz
 mean(c_dat$prod)
 sd(c_dat$prod)/sqrt(length(c_dat$prod))
 
+# Coefficient of variation
+# Royds
 r_cv_seas_4<-r_ct_all%>%
   filter(season%in%c("1415","1516","1617","1718"))%>%
   group_by(season)%>%
@@ -308,12 +325,57 @@ r_cv_seas_4<-r_ct_all%>%
   mutate(cv=sd/mean)
 mean(r_cv_seas_4$cv, na.rm=TRUE)
 
+# Crozier
 c_cv_seas_4<-c_ct_meas%>%
   filter(season%in%c("1415","1516","1617","1718"))%>%
   group_by(season)%>%
   summarise(mean=mean(prod),sd=sd(prod))%>%
   mutate(cv=sd/mean)
 mean(c_cv_seas_4$cv, na.rm=TRUE)
+
+
+# statistics requested during review ####
+# correlation between subcol area and count
+cor_area_ct <-all_dat%>%
+  # group_by(col)%>%
+  summarise(r=cor(area,active_ct),p=cor.test(area,active_ct)$p.value)
+
+# number of subcol with 4 counts
+summ_cts_4 <- all_dat%>%
+  group_by(col,subcol)%>%
+  summarise(n=n())%>%
+  group_by(col,n)%>%
+  summarise(n4=n())
+
+# number of subcolonies counted each year
+summ_cts_yr <- all_dat%>%
+  group_by(col,season)%>%
+  summarise(n=n())
+
+# Difference in means for whole time series
+t_cr_all <- t.test(c_ct_meas$prod, r_ct_all$prod)
+# fit gls model to test for differences in means
+nestinginfo <- groupedData(prod ~ col | subcol, data= cr_count_all)
+fit.compsym <- gls(prod ~ factor(col), data=nestinginfo, corr=corCompSymm(,form= ~ 1 | subcol))
+summary(fit.compsym)
+fit.ar1 <- gls(prod ~ factor(col), data=nestinginfo, corr=corAR1(, form= ~ 1 | subcol))
+summary(fit.ar1)
+anova(fit.compsym,fit.ar1)
+
+# difference in means for 4 years of study
+cr_4 <- cr_count_all%>%
+  filter(season%in%c("2014","2015","2016","2017"))
+
+
+# fit gls model to test for differences in means
+nestinginfo4 <- groupedData(prod ~ col | subcol, data= all_dat)
+fit.compsym4 <- gls(prod ~ factor(col), data=nestinginfo4, corr=corCompSymm(,form= ~ 1 | subcol))
+summary(fit.compsym4)
+fit.ar14 <- gls(prod ~ factor(col), data=nestinginfo4, corr=corAR1(, form= ~ 1 | subcol))
+summary(fit.ar14)
+anova(fit.compsym4,fit.ar14)
+
+
 
 ```
 Exploratory figs
@@ -390,9 +452,6 @@ r_dat%>%
   group_by(season)%>%
   summarise(count=n())
 
-
-  #annotate("text", x = 1:length(n_subcol_cts$subcol),y =1.65, label = n_subcol_cts$n, col="blue") + 
-  #labs(y = "chicks per active nest")
 
 # Plot prod by subcol
 c_dat%>%
@@ -553,8 +612,8 @@ rcorr(c_dat$mean_slope,c_dat$mean_TRI)
 
 ```
 
-Crozier GAMM
-```{r Crozier GAMM}
+Crozier GAM
+```{r Crozier GAM}
 # Starting with model with all variables of interest subcol id as random effect
 # using REML based on recommendation in Marra and Wood 2011
 # # Except if I want to compare models with different fixed effects I shouldn't
@@ -564,7 +623,7 @@ Crozier GAMM
 # remove annual mean so just modeling the spatial variability, not the annual variability
 ann_prod_anom<-all_dat%>%
   group_by(col,season)%>%
-  summarise(mean_prod=mean(prod, na.rm=TRUE),se=sd(prod, na.rm=TRUE)/sqrt(n()))%>%
+  dplyr::summarise(mean_prod=mean(prod, na.rm=TRUE),se=sd(prod, na.rm=TRUE)/sqrt(n()))%>%
   full_join(all_dat)%>%
   mutate(prod_anom = prod-mean_prod)%>%
   mutate_at(vars(area,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_windshelt,flow_acc,flow_acc_log,flow_acc_log1p,mean_acr,mean_acr_log),funs(scale))
@@ -572,11 +631,8 @@ ann_prod_anom<-all_dat%>%
 
 # Set k=6
 ck=6
+# Fit model with no interactions
 c_base_anom <-gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
-
-c_base_test <-gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck)+skua50+s(subcol, bs="re"), data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
-summary(c_base_test)
-# plot.gam(c_base_test)
 
 summary(c_base_anom)
 anova(c_base_anom)
@@ -585,20 +641,10 @@ plot.gam(c_base_anom,pages=1, shade=TRUE)
 gam.vcomp(c_base_anom)
 par(mfrow=c(2,2))
 gam.check(c_base_anom)
-concurvity(c_base_anom, full=FALSE)$estimate
+concurvity(c_base_anom, full=FALSE)
 
-
-
-
-# # Refit model with REML 
-# c_base_anom_REML <-gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck)+s(skua50, bs="fs",k=ck)+s(subcol, bs="re"), data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="REML")
-# summary(c_base_anom_REML)
-# par(mfrow=c(2,2))
-# gam.check(c_base_anom_REML)
-
-
-ck=6
-c_seasonx_anom <-gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev,by=season, k=ck)+s(mean_slope, by=season, k=ck) +s(mean_aspect,by=season,k=ck, bs="cc") +s(mean_windshelt,by=season,k=ck)+s(flow_acc_log1p,by=season, k=ck)+skua50*season+s(subcol, bs="re"), data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
+# Fit model with seasonal interaction
+c_seasonx_anom <-gam(prod_anom~s(area, by=season, k=ck) + s(pa_ratio, by=season, k=ck)+s(adjust_mean_elev,by=season, k=ck)+s(mean_slope, by=season, k=ck) +s(mean_aspect,by=season,k=ck, bs="cc") +s(mean_windshelt,by=season,k=ck)+s(flow_acc_log1p,by=season, k=ck)+skua50*season+s(subcol, bs="re"), data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
 summary(c_seasonx_anom)
 plot.gam(c_seasonx_anom,pages=1, shade=TRUE)
 
@@ -613,33 +659,26 @@ c_mod_tab<-AICctab(c_base_anom,c_seasonx_anom,nobs=292, base=TRUE, weights=TRUE,
 Gamms for Royds
 ```{r Royds Gamms, include=FALSE}
 
+# set k for royds
 rk=4
-r_base_anom <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=4, bs="cc") +s(mean_windshelt,k=rk)+s(flow_acc_log1p, k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
+# Fit model with no interactions
+r_base_anom <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc") +s(mean_windshelt,k=rk)+s(flow_acc_log1p, k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
 summary(r_base_anom)
 plot.gam(r_base_anom, pages=1)
-plot.gam(r_base_anom, pages=1, shade=T, residuals=T)
-
-rb_test <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc") +s(mean_windshelt,k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
-summary(rb_test)
-plot.gam(rb_test, pages=1)
-
 
 summary(r_base_anom)
 plot.gam(r_base_anom, pages=1, shade=T, residuals=T)
 gam.check(r_base_anom) # looks pretty good, some skew in the residuals
-concurvity(r_base_anom, full=FALSE)$estimate
+f
 
-
-# r_base_anom_REML <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc") +s(mean_windshelt,k=rk)+s(flow_acc_log1p, k=3)+s(skua50,bs="fs")+s(subcol, bs="re"), data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="REML")
-# summary(r_base_anom_REML)
-
-# rk=3 # Can't fit this model with k=4 (Model has more coefficients than data), can with k=3 is this a good idea? Seems risky to put too much on so little data
+# fit model with seasonal interactions
 r_seasonx_anom <-  gam(prod_anom~s(area,k=rk) + s(pa_ratio,k=rk)+ s(adjust_mean_elev,by=season, k=rk)+s(mean_slope,by=season,k=rk) +s(mean_aspect, by=season,bs="cc", k=rk) +s(mean_windshelt,by=season,k=rk)+ s(flow_acc_log1p,by=season,k=3)+ skua50*season, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
 summary(r_seasonx_anom)
 plot(r_seasonx_anom, pages=2, shade=TRUE)
 
 library(bbmle)
 r_mod_tab<-AICctab(r_base_anom,r_seasonx_anom,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
+
 
 ```
 Proportion Deviance explained
@@ -660,7 +699,8 @@ cb<-c_base_anom # Rename base model
 cb0 <- gam(prod_anom~1, data=filter(ann_prod_anom,col=="croz"))
 
 # Fit model with pa ratio removed and smooths for all other variables supplied from base model
-# Area and aspect already dropped
+# Area, aspect, and wind already dropped
+
 # Drop pa ratio
 cb1 <-gam(prod_anom~s(area, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE,method="ML", sp=c_base_anom$sp[-c(3,4)])
 
@@ -669,7 +709,7 @@ cb2 <-gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+ s(mean_slope, k=ck) +s(me
 # slope removed
 cb3<- gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE,method="ML",sp=c_base_anom$sp[-c(7,8)])
 # Windshelter removed
-cb4 <- gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc")+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE,method="ML", sp=c_base_anom$sp[-c(10,11)])
+# cb4 <- gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc")+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE,method="ML", sp=c_base_anom$sp[-c(10,11)])
 # flow accumulation removed
 cb5 <- gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"),select=TRUE, method="ML", sp=c_base_anom$sp[-c(12,13)] )
 #Skua removed
@@ -686,30 +726,31 @@ t=cb
 c_pa_devex <- 1-(deviance(cb0)-deviance(cb1))/(deviance(cb0)-deviance(cb))
 c_elev_devex <- 1-(deviance(cb0)-deviance(cb2))/(deviance(cb0)-deviance(cb))
 c_slope_devex <-1-(deviance(cb0)-deviance(cb3))/(deviance(cb0)-deviance(cb))
-c_wind_devex <-1-(deviance(cb0)-deviance(cb4))/(deviance(cb0)-deviance(cb))
+# c_wind_devex <-1-(deviance(cb0)-deviance(cb4))/(deviance(cb0)-deviance(cb))
 c_flood_devex<-1-(deviance(cb0)-deviance(cb5))/(deviance(cb0)-deviance(cb))
 c_skua_devex<-1-(deviance(cb0)-deviance(cb6))/(deviance(cb0)-deviance(cb))
 
 
-# Croz Proportion explained
+# Croz Proportion (deviance(rb1)-deviance(rb))/deviance(rb0)
 
-# c_elev_devex <- (deviance(cb2)-deviance(cb))/deviance(cb0)
-# c_slope_devex <- (deviance(cb3)-deviance(cb))/deviance(cb0)
+c_pa_ndevex <- ((deviance(cb1)-deviance(cb))/deviance(cb0))*100
+c_elev_ndevex <- ((deviance(cb2)-deviance(cb))/deviance(cb0))*100
+c_slope_ndevex <- ((deviance(cb3)-deviance(cb))/deviance(cb0))*100
 # c_wind_devex <- (deviance(cb4)-deviance(cb))/deviance(cb0)
-# c_flood_devex<- (deviance(cb5)-deviance(cb))/deviance(cb0)
-# c_skua_devex<- (deviance(cb6)-deviance(cb))/deviance(cb0)
-# # c_subcol_devex<- (deviance(cb7)-deviance(cb))/deviance(cb0)
+c_flood_ndevex<- ((deviance(cb5)-deviance(cb))/deviance(cb0))*100
+c_skua_ndevex<- ((deviance(cb6)-deviance(cb))/deviance(cb0))*100
+# c_subcol_devex<- (deviance(cb7)-deviance(cb))/deviance(cb0)
 
 
 # Royds
 rb <- r_base_anom
 rb0 <- gam(prod_anom~1, data=filter(ann_prod_anom,col=="royds"))
 deviance(rb0)
-rb$sp[c(3)]
+rb$sp[c(1)]
 
 t <- gam.vcomp(rb)
-# Area, slope and wind shelter already dropped
-# Area and elevation dropped already
+
+# Elevation dropped already
 
 #pa ratio removed
 rb1 <-gam(prod_anom~ s(area, k=rk)+s(adjust_mean_elev, k=rk)+ s(mean_slope, k=rk) +s(mean_aspect,k=rk, bs="cc") +s(mean_windshelt,k=rk)+s(flow_acc_log1p, k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"),select=TRUE,method="ML", sp=rb$sp[-c(3,4)])
@@ -726,14 +767,8 @@ rb4<- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk) 
 rb5 <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+ s(mean_slope, k=rk) +s(mean_aspect,k=rk, bs="cc") +s(mean_windshelt,k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"),select=TRUE, method="ML", sp=rb$sp[-c(12,13)] )
 #Skua removed
 rb6 <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+ s(mean_slope, k=rk) +s(mean_aspect,k=rk, bs="cc") +s(mean_windshelt,k=rk)+s(flow_acc_log1p, k=rk), data=filter(ann_prod_anom,col=="royds"),select=TRUE, method="ML",sp=rb$sp[-14])
-
-# remove area
-rb7 <- gam(prod_anom~ s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+ s(mean_slope, k=rk) +s(mean_aspect,k=rk, bs="cc") +s(mean_windshelt,k=rk)+s(flow_acc_log1p, k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"),select=TRUE,method="ML", sp=rb$sp[-c(1,2)])
-summary(rb7)
-
-# remove elevation
-rb8 <- gam(prod_anom~ s(area, k=rk)+s(pa_ratio, k=rk)+ s(mean_slope, k=rk) +s(mean_aspect,k=rk, bs="cc") +s(mean_windshelt,k=rk)+s(flow_acc_log1p, k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"),select=TRUE,method="ML", sp=rb$sp[-c(5,6)])
-summary(rb8)
+# area removed
+rb7 <- gam(prod_anom~s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+ s(mean_slope, k=rk) +s(mean_aspect,k=rk, bs="cc") +s(mean_windshelt,k=rk)+s(flow_acc_log1p, k=rk), data=filter(ann_prod_anom,col=="royds"),select=TRUE, method="ML",sp=rb$sp[-c(1,2)])
 
 # # subcol ID removed
 # rb9 <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+ s(mean_slope, k=rk) +s(mean_aspect,k=rk, bs="cc") +s(mean_windshelt,k=rk)+s(flow_acc_log1p, k=rk)+s(skua50, bs="fs",k=rk), data=filter(ann_prod_anom,col=="royds"), select=TRUE,method="REML",sp=rb$sp[-15])
@@ -746,7 +781,7 @@ summary(rb8)
 # Proportion deviance explained
 summary(rb)$dev.expl-summary(rb0)$dev.expl
 summary(rb)$dev.expl-summary(rb1)$dev.expl
-summary(rb)$dev.expl-summary(rb9)$dev.expl
+summary(rb)$dev.expl-summary(rb2)$dev.expl
 
 summary(rb)$dev.expl-(1-deviance(rb6)/rb6$null.deviance)
 
@@ -757,22 +792,28 @@ r_windshelt_devex <- 1-(deviance(rb0)-deviance(rb4))/(deviance(rb0)-deviance(rb)
 r_flood_devex<- 1-(deviance(rb0)-deviance(rb5))/(deviance(rb0)-deviance(rb))
 r_skua_devex<- 1-(deviance(rb0)-deviance(rb6))/(deviance(rb0)-deviance(rb))
 r_area_devex <- 1-(deviance(rb0)-deviance(rb7))/(deviance(rb0)-deviance(rb))
-r_elev_devex <- 1-(deviance(rb0)-deviance(rb8))/(deviance(rb0)-deviance(rb))
 
-# r_pa_devex <- (deviance(rb1)-deviance(rb))/deviance(rb0)
-# r_slope_devex <- (deviance(rb2)-deviance(rb))/deviance(rb0)
-# r_aspect_devex <- (deviance(rb3)-deviance(rb))/deviance(rb0)
-# r_windshelt_devex <- (deviance(rb4)-deviance(rb))/deviance(rb0)
-# r_flood_devex<- (deviance(rb5)-deviance(rb))/deviance(rb0)
-# r_skua_devex<- (deviance(rb6)-deviance(rb))/deviance(rb0)
+r_pa_ndevex <- ((deviance(rb1)-deviance(rb))/deviance(rb0))*100
+r_slope_ndevex <- ((deviance(rb2)-deviance(rb))/deviance(rb0))*100
+r_aspect_ndevex <- ((deviance(rb3)-deviance(rb))/deviance(rb0))*100
+r_windshelt_ndevex <- ((deviance(rb4)-deviance(rb))/deviance(rb0))*100
+r_flood_ndevex<- ((deviance(rb5)-deviance(rb))/deviance(rb0))*100
+r_skua_ndevex<- ((deviance(rb6)-deviance(rb))/deviance(rb0))*100
+r_area_ndevex <- ((deviance(rb7)-deviance(rb))/deviance(rb0))*100
 
 # Make table to proportion deviance explained
-rb_term_devex<-c(r_area_devex,r_pa_devex,r_elev_devex,r_slope_devex,r_aspect_devex,r_windshelt_devex,r_flood_devex,r_skua_devex)
+rb_term_devex<-c(r_area_devex,r_pa_devex,0,r_slope_devex,r_aspect_devex,r_windshelt_devex,r_flood_devex,r_skua_devex)
 sum(rb_term_devex)
-cb_term_devex<- c(0,c_pa_devex,c_elev_devex, c_slope_devex,0,c_wind_devex, c_flood_devex, c_skua_devex)
+rb_term_ndevex <- c(r_area_ndevex,r_pa_ndevex,0,r_slope_ndevex,r_aspect_ndevex,r_windshelt_ndevex,r_flood_ndevex,r_skua_ndevex)
+sum(rb_term_ndevex)
+
+cb_term_devex<- c(0,c_pa_devex,c_elev_devex, c_slope_devex,0,0, c_flood_devex, c_skua_devex)
 sum(cb_term_devex)
 
-term_devex <- data.frame(term=c("Area","Perim/area_ratio","Elevation","Slope","Aspect","Wind_shelter", "flow_acc","skua"), Royds=rb_term_devex, Croz=cb_term_devex)
+cb_term_ndevex<- c(0,c_pa_ndevex,c_elev_ndevex, c_slope_ndevex,0,0, c_flood_ndevex, c_skua_ndevex)
+sum(cb_term_ndevex)
+
+term_devex <- data.frame(term=c("Area","Perim/area_ratio","Elevation","Slope","Aspect","Wind_shelter", "flow_acc","skua"), Croz_ndevex=cb_term_ndevex, Croz_mdevex=cb_term_devex,Royds_ndevex=rb_term_ndevex,royds_mdevex=rb_term_devex)
 
 # write.csv(term_devex,"Z:/Informatics/S031/analyses/aschmidt/subcol_var/results/gam_model_term_deviance_explained_v5.csv")
 # 
@@ -840,8 +881,8 @@ ggplot(ann_prod_pred,aes(prod_anom,predict_base, colour=col))+
 # print(c_ovp)
 
 # 
-rcorr(croz_ann_prod$prod_anom,croz_ann_prod$predict_base)$P
-rcorr(royds_ann_prod$prod_anom,royds_ann_prod$predict_base)$P
+rcorr(croz_ann_prod$prod_anom,croz_ann_prod$predict_base)
+rcorr(royds_ann_prod$prod_anom,royds_ann_prod$predict_base)
 # 
 # 
 # r_ovp<-ggplot(royds_ann_prod,aes(prod_anom,predict_base))+
@@ -860,9 +901,10 @@ rcorr(royds_ann_prod$prod_anom,royds_ann_prod$predict_base)$P
 # Model plots ####
 pred_dat<- all_dat%>%
   group_by(col,season)%>%
-  summarise(mean_prod=mean(prod, na.rm=TRUE),se=sd(prod, na.rm=TRUE)/sqrt(n()))%>%
+  dplyr::summarise(mean_prod=mean(prod, na.rm=TRUE),se=sd(prod, na.rm=TRUE)/sqrt(dplyr::n()))%>%
   full_join(all_dat)%>%
-  mutate(prod_anom = prod-mean_prod, skua50=as.factor(skua50))
+  mutate(prod_anom = prod-mean_prod, skua50=as.factor(skua50))%>%
+  ungroup()
 
 c_base_pred <- gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck)+skua50, select=TRUE, data=filter(pred_dat,col=="croz"), method="ML")
 
@@ -871,15 +913,155 @@ r_base_pred <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_ele
 
 
 
+```
+New Figure 4 for revision
+```{r new Fig 4}
 # Need to do them one at a time to modify labels
-# Croz and Royds side-by-side
-par(mfrow=c(4,4),mar=c(3,4,2,1),mgp=c(2,0.7,0))
+
+
+# Making a new function to do this
+# need to predict each partial smooth and then plot
+plot.smooths <- function(x, data, model, ylim=NULL, xlim=NULL,xlab=NULL,ylab="Effect on\n breeding success",col_x, add){
+#create a sequence of new data for variable of interest
+new_dat <- seq(min(data[,x]),max(data[,x]),length=nrow(data))
+# predict partial smooth
+data[,x] <- new_dat
+# predict with new data
+pred <- predict(model,type="terms",newdata=data,se.fit=TRUE)
+fit<-data.frame(pred$fit)
+fit.up95<-fit-1.96*pred$se.fit
+fit.low95<-fit+1.96*pred$se.fit
+s.var <- paste("s.",x,".",sep="")
+plot_dat <- data.frame(x=data[,x],fit_var=fit[,s.var])
+# plot smooth but leave blank for now so that we can add the line on top of the polygon
+if(add==FALSE){
+plot(plot_dat[,x],plot_dat[,"fit_var"],ylim=ylim,xlim=xlim,add=add, xlab=xlab,ylab=ylab, type="n")
+  polygon(c(new_dat, rev(new_dat)), 
+        c(fit.low95[,s.var],rev(fit.up95[,s.var])), col=alpha(col_x,0.7),border=NA)
+# add predicted line
+lines(plot_dat[,x],plot_dat[,"fit_var"],  lwd=1, col=col_x)
+} else {
+# For the confidence grey polygon
+polygon(c(new_dat, rev(new_dat)), 
+        c(fit.low95[,s.var],rev(fit.up95[,s.var])), col=alpha(col_x,0.7),border=NA)
+# add predicted line
+lines(plot_dat[,x],plot_dat[,"fit_var"],  lwd=1, col=col_x)
+}
+}
+
+
+# Croz and Royds on same panel
+dev.new()
+cairo_ps()
+par(mfrow=c(4,2),mar=c(3,4,2,1),mgp=c(2.1,0.4,0), las=1, tck=-0.02)
 ylim=c(-1,0.45)
+
+# Area ##
+# Croz
+xlim <- c(min(pred_dat[pred_dat$col=="croz","area"],pred_dat[pred_dat$col=="royds","area"]),max(pred_dat[pred_dat$col=="croz","area"],pred_dat[pred_dat$col=="royds","area"]))
+plot.smooths(x="area",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Area",col_x=col1)
+plot.smooths(x="area",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlab="Area",col_x=col2)
+
+
+# PA ratio
+var="pa_ratio"
+xlim <- c(min(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]),max(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]))
+plot.smooths(x="pa_ratio",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Perim/Area ratio",col_x=col1)
+plot.smooths(x="pa_ratio",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlab="Perim/Area ratio",col_x=col2)
+legend("bottomleft", legend=c("Crozier", "Royds"), col=c(col1, col2), border=c(col1,col2), fill=c(col1,col2))
+
+# Elevation
+var="adjust_mean_elev"
+xlim <- c(min(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]),max(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]))
+plot.smooths(x="adjust_mean_elev",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Elevation",col_x=col1)
+plot.smooths(x="adjust_mean_elev",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlab="Elevation",col_x=col2)
+
+# Slope
+var="mean_slope"
+xlim <- c(min(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]),max(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]))
+plot.smooths(x="mean_slope",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Slope",col_x=col1)
+plot.smooths(x="mean_slope",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlab="Slope",col_x=col2)
+
+# Aspect
+var="mean_aspect"
+xlim <- c(min(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]),max(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]))
+plot.smooths(x="mean_aspect",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Aspect",col_x=col1)
+plot.smooths(x="mean_aspect",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlim=xlim,xlab="Aspect",col_x=col2)
+
+# Wind shelter
+var="mean_windshelt"
+xlim <- c(min(pred_dat[,var]),max(pred_dat[,var]))
+plot.smooths(x="mean_windshelt",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Wind shelter",col_x=col1)
+plot.smooths(x="mean_windshelt",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlim=xlim,xlab="Wind shelter",col_x=col2)
+
+# Flow accumulation
+# Wind shelter
+var="flow_acc_log1p"
+xlim <- c(min(pred_dat[,var]),max(pred_dat[,var]))
+plot.smooths(x="flow_acc_log1p",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Flow accumulation",col_x=col1)
+plot.smooths(x="flow_acc_log1p",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlab="Flow accumulation",col_x=col2)
+
+# Skua
+var="skua50"
+# doing this one from scratch
+c_skua0 <- c_base_pred$coefficients[1]
+c_skua1<-c_skua0+c_base_pred$coefficients[2]
+c_skua0_se <- summary(c_base_pred)$se[1]
+c_skua1_se <- summary(c_base_pred)$se[2]
+
+r_skua0 <- r_base_pred$coefficients[1]
+r_skua1<-r_skua0+r_base_pred$coefficients[2]
+r_skua0_se <- summary(r_base_pred)$se[1]
+r_skua1_se <- summary(r_base_pred)$se[2]
+
+cr_skua <- data.frame(col=c("croz","croz", "royds","royds"),
+                      skua50=factor(c(0,1,0,1)),
+                      coef=c(c_skua0, c_skua1, r_skua0, r_skua1),
+                      ci=c(1.96*c_skua0_se, 1.96*c_skua1_se,1.96*r_skua0_se,1.96*r_skua1_se))
+
+skua_mod<-ggplot(cr_skua,aes(skua50,coef,col=col))+
+  geom_point(size=2,position=position_dodge(width=0.15))+
+  geom_errorbar(aes(ymin=coef-ci,ymax=coef+ci),width=0.1, size=0.5,position=position_dodge(width=0.15))+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"),
+        legend.position = "none",
+        axis.title=element_text(size=8),
+        axis.text=element_text(size=8),
+        plot.margin = margin(17,10,0,1, "pt"),
+        axis.title.x=element_text(margin = margin(t = 8, r = 0, b = 0, l = 0)))+
+  ylab("Effect on\n breeding success")+
+  xlab("Skua within 50m")+
+  ylim(ylim)+
+  scale_colour_manual(values=c(col1,col2),name="Colony",labels = c("Crozier","Royds"))
+
+
+plot.new()
+vp <- grid::viewport(height = unit(0.25,"npc"), width=unit(0.5, "npc"), 
+              just = c("left","bottom"),
+              y = 0, x = 0.5,layout.pos.row = 4,layout.pos.col = 2)
+print(skua_mod, vp = vp)
+
+
+```
+Old Fig 4
+```{r old fig 4}
+# 
+# plot.smooths(x="skua50",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Skua within 50m",col_x=col1)
+# plot.smooths(x="skua50",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlab="Skua within 50m",col_x=col2)
+# c_base_pred$terms
+
+
+# Old version of figure (from original submission)
+
 # Area ##
 # Croz
 plot.gam(c_base_pred,select=1, xlab="Area",se=TRUE, scheme=1, shade=T, pch=19, cex=0.5, ylab="Breeding Success",seWithMean = TRUE,cex.lab=1.3,ylim=ylim, main="Crozier", shade.col=alpha(col1,0.7),col=col1)
+
 # Royds
 plot.gam(r_base_pred,select=1, xlab="Area",se=TRUE, scheme=1, shade=T, pch=19, cex=0.5, ylab="",seWithMean = TRUE,cex.lab=1.3,ylim=ylim, main="Royds", shade.col = alpha(col2,0.7),col=col3)
+
+test <- plot.gam(r_base_pred,select=1, xlab="Area",se=TRUE, scheme=1, shade=T, pch=19, cex=0.5, ylab="",seWithMean = TRUE,cex.lab=1.3,ylim=ylim, main="Royds", shade.col = alpha(col2,0.7),col=col3)[[1]]$x
+lines(test, r_area_gam_fit)
 
 # PA ratio ##
 # Croz
@@ -892,7 +1074,6 @@ plot.gam(r_base_pred,select=2, xlab="Perim/Area ratio",se=TRUE, scheme=1, shade=
 plot.gam(c_base_pred,select=3, xlab="Elevation", se=TRUE, scheme=1, shade=T, pch=19, cex=0.5, ylab="Breeding Success",seWithMean = TRUE,cex.lab=1.3,ylim=ylim,shade.col=alpha(col1,0.7),col=col1)
 # Royds
 plot.gam(r_base_pred,select=3, xlab="Elevation", se=TRUE, scheme=1, shade=T, pch=19, cex=0.5, ylab="",seWithMean = TRUE,cex.lab=1.3,ylim=ylim,shade.col = alpha(col2,0.7),col=col3)
-
 
 # Slope##
 # Croz
@@ -922,39 +1103,15 @@ plot.gam(r_base_pred,select=7, xlab="Flow accumulation",se=TRUE, scheme=1, shade
 # Croz
 termplot(c_base_pred, terms=c("skua50"), se=TRUE, col.term= col1, lwd.term=3, lwd.se=1,lty.se = 1,col.se=col1, use.factor.levels = TRUE, pch=19, ylab="Breeding success", xlab="Skua within 50m",ylim=ylim)
 # Royds
-termplot(r_base_pred, terms=c("skua50"), se=TRUE, col.term= col3, lwd.term=3, lwd.se=1,lty.se = 1,col.se=col3, use.factor.levels = TRUE, pch=19, ylab="Breeding success", xlab="Skua within 50m",ylim=ylim)
+termplot(r_base_pred, terms=c("skua50"), se=TRUE, col.term= col3, lwd.term=3, lwd.se=1,lty.se = 1,col.se=col3, use.factor.levels = TRUE, pch=19, ylab="Breeding success", xlab="Skua within 50m",ylim=ylim, add=TRUE)
 
 
 
-gam1$coefficients["(Intercept)"]
-gam1$coefficients["season1516:col_sidew"]
-
-termplot(gam1, terms=c("season"), se=TRUE, col.term= "black", lwd.term=4, lwd.se=2,col.se="black", use.factor.levels = TRUE, pch=19, ylab="Partial for season", xlab="Season",ylim=c(-1.7,0))
-
-termplot(gam1, terms="season1516:col_sidew", se=TRUE, col.term= "black", lwd.term=4, lwd.se=2,col.se="black", use.factor.levels = TRUE, pch=19, ylab="Partial for colony side", xlab="colony side",ylim=c(-1.7,0))
-
-# 
-# # Royds gam plot
-# # Need to do them one at a time to modify labels
-# par(mfrow=c(3,3),mar=c(4,4,3,2))
-# plot.gam(r_base_anom_REML,select=1, xlab="Area",se=TRUE, scheme=1, shade=T, pch=19, cex=0.5, ylab="Breeding Success",seWithMean = TRUE,cex.lab=1.3)
-# 
-# plot.gam(r_base_anom_REML,select=2, xlab="Perim/Area ratio",se=TRUE, scheme=1, shade=T, pch=19, cex=0.5, ylab="Breeding Success",seWithMean = TRUE,cex.lab=1.3)
-# 
-# plot.gam(r_base_anom_REML,select=3, xlab="Elevation", se=TRUE, scheme=1, shade=T, pch=19, cex=0.5, ylab="Breeding Success",seWithMean = TRUE,cex.lab=1.3)
-# 
-# plot.gam(r_base_anom_REML,select=4, xlab="Slope", se=TRUE, scheme=1, shade=T, pch=19, cex=0.5, ylab="Breeding Success",seWithMean = TRUE,cex.lab=1.3)
-# 
-# plot.gam(r_base_anom_REML,select=5, xlab="Aspect", se=TRUE, scheme=1, shade=T, pch=19, cex=0.5, ylab="Breeding Success",seWithMean = TRUE,cex.lab=1.3)
-# 
-# plot.gam(r_base_anom_REML,select=6, xlab="Wind shelter", se=TRUE, scheme=1, shade=T, pch=19, cex=0.5, ylab="Breeding Success",seWithMean = TRUE,cex.lab=1.3)
-# 
-# plot.gam(r_base_anom_REML,select=7, xlab="Flow accumulation",se=TRUE, scheme=1, shade=T, pch=19, cex=0.5, ylab="Breeding Success",seWithMean = TRUE,cex.lab=1.3)
 
 ```
 
 Predict Productivity Spatially
-```{r Predict prod to space}
+```{r Predict productivity to space and correlate to BQI}
 # read in rasters to use for prediction
 library(raster)
 # format data for prediction
@@ -986,162 +1143,293 @@ plot(c_area)
 c_skua50<-crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/covar_raster_stack/croz_all_subcol_2014_skua50mbin_rast.tif"),ext)
 plot(c_skua50)
 
-
 c_pa_ratio <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/covar_raster_stack/croz_all_subcol_2014_pa_ratio_rast.tif"),ext)
 plot(c_pa_ratio)
 
-c_aspect <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_aspect_corrected.tif"),ext)
+c_aspect <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_subcol_aspect.tif"),ext)
 plot(c_aspect)
 
-c_slope <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/covar_raster_stack/croz_slope_clip.tif"),ext)
+c_slope <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_subcol_slope.tif"),ext)
 plot(c_slope)
 
-c_elev <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/covar_raster_stack/croz_elev_clip.tif"),ext)+47
+c_elev <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_subcol_elev.tif"),ext)+47
 plot(c_elev)
 
-c_windshelt <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/covar_raster_stack/croz_windshelter300m.asc"),ext)
+c_windshelt <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_subcol_windselt.tif"),ext)
 plot(c_windshelt)
 
-c_flow <-log1p(crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_flowacc_snow_v2.tif"),ext))
+c_flow <-log1p(crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_subcol_flow_acc.tif"),ext))
 plot(c_flow)
 
-# c_flow[c_flow==-Inf]<-NA
-
+c_flow[c_flow==-Inf]<-NA
 
 croz_stack <- stack(c_area, c_skua50, c_pa_ratio,c_aspect, c_slope,c_elev,c_windshelt, c_flow)
 names(croz_stack)<-c("area","skua50","pa_ratio","mean_aspect","mean_slope","adjust_mean_elev","mean_windshelt","flow_acc_log1p")
 
-# Predict to all subcolonies at Crozier
+# Predict subcolony quality to all subcolonies at Crozier
 c_pred_anom <- predict(croz_stack,c_base_pred, type="response")
 
-plot(c_pred_anom, col=rev(rainbow(50, start = 0, end = 0.8, alpha = 1)),main="Predicted habitat quality")
-hist(c_pred_anom)
+plot(c_pred_anom, col=rev(rainbow(50, start = 0, end = 0.8, alpha = 1)),main="Predicted subcolony quality")
+hist(c_pred_anom@data@values)
 mean(c_pred_anom@data@values, na.rm=TRUE)
 sd(c_pred_anom@data@values, na.rm=TRUE)/sqrt(sum(!is.na(c_pred_anom@data@values)))
-# writeRaster(c_pred_anom, "Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_predict_prod_base_anom_v9.tif", format="GTiff", overwrite=FALSE)
+writeRaster(c_pred_anom, "Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_predict_subcol.tif", format="GTiff", overwrite=FALSE)
 # 
 
 
-
 # Correlate predicted prod/habitat quality with individual quality ####
-# Use predicted prod layer in arc, convert to point layer, use spatial join to join predicted prod values to points where bqi birds bred
+# need to create a table with last BQI value for each bandnumb
+c_bqi<- read.csv("Z:/Informatics/S031/analyses/BQI/BQI_inclcurseas_1998to2017_forAnnie.csv", header=TRUE)%>%
+  mutate(season_yr=Season,season = plyr::mapvalues(Season, 
+                         from = factor(c(1998:2017)),
+                         to = c("9899","9900","0001","0102","0203","0304","0405",
+                                "0506","0607","0708","0809","0910","1011","1112",
+                                "1213","1314","1415","1516","1617","1718")))
 
-# # Or use extract function in raster package
-# # read in bqi table
-# bqi_last4seas<- read.csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/croz_last4seas_bqi_pred_prod_v2.csv",header=TRUE)
+ggplot(c_bqi,aes(Br_exp,BQI_A,group=Bandnumb))+
+  geom_line(aes(colour=Bandnumb))
+  
+
+# Read in resigt data to get coordinates where bred
+allresight_raw <- read.csv("Z:/Informatics/S031/S0311920/croz1920/bandsearch/allresight_1819.csv", as.is=TRUE)%>%
+  mutate(bandnumb=as.numeric(bandnumb),lat=as.numeric(lat))
+
+# Filter to lines that have gps location
+allrs_latlon <- 
+  allresight_raw%>%
+  # full_join(rs17)%>%
+  mutate(lat=as.numeric(lat), Bandnumb=as.numeric(bandnumb))%>%
+  dplyr::select(Bandnumb,season,colony, orig_col,lat, lon)%>%
+  filter(!lat==0, !lon==0)%>%
+  group_by(Bandnumb,season)%>%
+  dplyr::select(Bandnumb,season,lat,lon)%>%
+  # keep only one record per band per season
+  dplyr::slice(1)
+
+# replace positive lat with negative
+allrs_latlon$lat[allrs_latlon$lat>0]=-allrs_latlon$lat[allrs_latlon$lat>0]
+# replace lat>-70 with NA
+allrs_latlon$lat[allrs_latlon$lat>-77.3|allrs_latlon$lat<=(-600)]=NA
+allrs_latlon$lat[allrs_latlon$lat<=(-600)]=NA
+# allrs_latlon$lat[allrs_latlon$lat>-70]=NA
+allrs_latlon$lon[allrs_latlon$lon>300]=NA
+plot(allrs_latlon$lat)
+
+c_bqi_loc <- 
+  inner_join(c_bqi,allrs_latlon, by=c("Bandnumb","season"))%>%
+ #   arrange(Bandnumb))
+  # group_by(Bandnumb)%>%
+  # dplyr::slice(n())%>%
+  # ungroup%>%
+  filter(!lat<(-78.0),!lat==1,!lat>-77.3,lon>168.0,lon<169.9)
+
+plot(c_bqi_loc$lon,c_bqi_loc$lat)
+
+
+# select individuals that meet criteria for study
+# filter to birds that bred at least once in last 4 years and bred at least 3 times overall and 
+# not in GDR deploy list
+gdr_bands <- read.csv("Z:/Informatics/S031/analyses/GDR/data/cr_gdr_bands.csv")
+
+c_bqi_crit <- c_bqi_loc%>%
+  filter(Season%in%c(2014:2017),Br_exp>2,!Result=="NB",!Bandnumb%in%gdr_bands$band)%>%
+  group_by(Bandnumb)%>%
+  arrange(Season)%>%
+  slice(n())
+
+# read in predicted productivity raster
+c_pred_prod<-raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_predict_subcol.tif")
+
+# convert raster to points
+c_pred_pt <- st_as_sf(rasterToPoints(pred_prod, spatial=TRUE))%>%
+  rename(pred_prod=croz_predict_subcol)
+plot(pred_pt, cex=.2)
+# reproject to same a bqi locations
+pred_pt <- st_transform(pred_pt,crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
+
+# convert bqi coords to spatial points data frame
+bqi_sp <- bqi_crit%>%
+  ungroup()%>%
+  dplyr::select(Bandnumb,lat,lon,BQI_A)%>%
+  st_as_sf(coords=c("lon","lat"), remove=FALSE)
+
+st_crs(bqi_sp)<- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+
+# use spatial join to join predicted productivity to bqi
+bqi_prod <- st_join(bqi_sp,pred_pt["pred_prod"], 
+                    join=st_nn, maxdist=5)%>%
+  as.data.frame(.)%>%
+  dplyr::select(-geometry)
+
+ggplot(bqi_prod,aes(pred_prod,BQI_A))+
+  geom_point()+
+  xlab("Predicted subcolony quality")+
+  ylab("BQI")+
+  geom_smooth(method = "lm")
+
+Hmisc::rcorr(bqi_prod$BQI_A,bqi_prod$pred_prod)
+
+
+write.csv(bqi_prod, "Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/croz_bqi_pred_subcol_loc.csv", row.names = FALSE)
 
 
 
-
-# read in table with bqi and nearest predicted prod
-bqi_pred_prod <- read.csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/croz_bqi_all_pred_prod_v3.csv")%>%
-  filter(!grid_code==0,Br_exp>2,Season%in%c(2014,2015,2016,2017),Orig_col=="CROZ",!Device==1,!Device=="GDR")%>%
-  rename(hab_qual=grid_code)%>%
+# read in table with Crozier  bqi and nearest predicted prod
+c_bqi_pred_prod <- read.csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/croz_bqi_all_pred_prod_v5.csv")%>%
+  filter(!GRID_CODE==0,Br_exp>2,Season%in%c(2014,2015,2016,2017),Orig_col=="CROZ",!Device==1,!Device=="GDR")%>%
+  rename(hab_qual=GRID_CODE)%>%
   group_by(Bandnumb)%>%
   arrange(Season)%>%
   dplyr::slice(n())
 
-bqi_pred_prod%>%
-  summarise(n())
-
-# min_bqi=min(bqi_pred_prod$BQI_A)
-# range_bqi=max(bqi_pred_prod$BQI_A)-min(bqi_pred_prod$BQI_A)
-# bqi_cuts=range_bqi/3
+c_bqi_pred_prod<-read.csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/croz_bqi_pred_subcol_loc.csv")
 
 
-bqi_quant=quantile(bqi_pred_prod$BQI_A, probs = seq(0, 1, 0.25),na.rm=TRUE)
-# low_break=bqi_pred_prod[58,"BQI_A"]
-# mid_break=bqi_pred_prod[115,"BQI_A"]
+c_bqi_quant=quantile(c_bqi_pred_prod$BQI_A, probs = seq(0, 1, 0.25),na.rm=TRUE)
+# low_break=c_bqi_pred_prod[58,"BQI_A"]
+# mid_break=c_bqi_pred_prod[115,"BQI_A"]
 
-bqi_pred_prod<- bqi_pred_prod%>%
-  mutate(bqi_cat=ifelse(BQI_A<bqi_quant[2],"l",ifelse(BQI_A<bqi_quant[4],"m","h")))
+c_bqi_pred_prod<- c_bqi_pred_prod%>%
+  mutate(bqi_cat=ifelse(BQI_A<c_bqi_quant[2],"l",ifelse(BQI_A<c_bqi_quant[4],"m","h")))
 
+
+ggplot(c_bqi_pred_prod,aes(BQI_A))+
+  geom_histogram(bins=60)
 
 # Overall correlation between BQI and predicted breeding success (habitat quality)
-rcorr(bqi_pred_prod$BQI_A, bqi_pred_prod$hab_qual)
+Hmisc::rcorr(c_bqi_pred_prod$BQI_A, c_bqi_pred_prod$pred_prod)
 
 
-bqi_m <- lm(BQI_A~hab_qual*bqi_cat,data=bqi_pred_prod)
-summary(bqi_m)
-anova(bqi_m)
-
-ggplot(bqi_pred_prod,aes(hab_qual,BQI_A))+
+ggplot(c_bqi_pred_prod,aes(hab_qual,BQI_A))+
   geom_point()+geom_smooth(method=lm)+
   xlab("habitat quality")
 
 # Scatter plot colored by bqi category
-bqi_pred_prod$bqi_cat<- factor(bqi_pred_prod$bqi_cat, levels=c("h","m","l"))
-bqi_pred_prod%>%
+c_bqi_pred_prod$bqi_cat<- factor(c_bqi_pred_prod$bqi_cat, levels=c("h","m","l"))
+c_bqi_pred_prod%>%
   group_by(bqi_cat)%>%
   summarise(mean_hq=mean(hab_qual))
 
-ggplot(bqi_pred_prod,aes(hab_qual,BQI_A, color=bqi_cat))+
-  geom_point(size=1.8)+geom_smooth(method=lm)+
+
+p1_cbqi <-ggplot(c_bqi_pred_prod,aes(pred_prod,BQI_A, color=bqi_cat))+
+  geom_point(size=1.8)+
+  geom_smooth(method=lm, aes(fill=bqi_cat))+
   xlab("Habitat quality")+
   ylab("Breeding quality index (BQI)")+
   # scale_colour_manual(values = c("Black", "lightgrey", "grey50"))
-  #scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9")
-  scale_color_brewer(palette="Paired",labels = c("High","Medium","Low"))+
-  # theme_bw()+ 
-  guides(colour=guide_legend(title="BQI\ncategory"))+
-  theme_classic()
-  
-
-ggplot(bqi_pred_prod,aes(hab_qual,BQI_A, color=Sex))+
-  geom_point(size=1.8)+geom_smooth(method=lm)+
-  xlab("Habitat quality")+
-  ylab("Breeding quality index (BQI)")
-
-rcorr(bqi_pred_prod$BQI_A[bqi_pred_prod$Sex=="F"], bqi_pred_prod$hab_qual[bqi_pred_prod$Sex=="F"])
-m_bqi_sex<-lm(BQI_A~hab_qual*Sex,data=bqi_pred_prod)
-anova(m_bqi_sex)
-  
-  # scale_colour_manual(values = c("Black", "lightgrey", "grey50"))
-  #scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9")
+  scale_fill_brewer(palette="Paired",labels = c("High","Medium","Low"), aesthetics = c("colour", "fill"))+
   # scale_color_brewer(palette="Paired",labels = c("High","Medium","Low"))+
-  # # theme_bw()+ 
-  # guides(colour=guide_legend(title="BQI\ncategory"))+
-  # theme_classic()
-
-
-# low BQI only
-low_bqi <- bqi_pred_prod%>%
-  filter(bqi_cat=="l")
-rcorr(low_bqi$BQI_A, low_bqi$hab_qual)
-
-m_lbqi_hab_qual <- lm(BQI_A~hab_qual,data=low_bqi)
-summary(m_lbqi_hab_qual)
-
-# High quality birds only
-high_bqi <- bqi_pred_prod%>%
-  filter(bqi_cat=="h")
-rcorr(high_bqi$BQI_A, high_bqi$hab_qual)
-
-# Medium quality birds only
-med_bqi <- bqi_pred_prod%>%
-  filter(bqi_cat=="m")
-rcorr(med_bqi$BQI_A, med_bqi$hab_qual)
-
-# Plot of BQI by habitat quality by group
-bqi_pred_prod%>%
-  group_by(bqi_cat)%>%
-  summarise(pred_mean=mean(hab_qual),ci=1.96*sd(hab_qual)/sqrt(n()),n=n())%>%
-ggplot(aes(bqi_cat,pred_mean, fill=bqi_cat))+
-  geom_bar(stat="identity")+ 
-  geom_errorbar(aes(ymin=pred_mean - ci,ymax=pred_mean+ci),width=0.2)+
-  xlab("breeding quality")
-
-# Test for difference of average habitat quality of low vs high bqi: no sig different, but low birds do have lower mean
-t.test(bqi_pred_prod$hab_qual[bqi_pred_prod$bqi_cat=="l"], bqi_pred_prod$hab_qual[bqi_pred_prod$bqi_cat=="h"])
+  # theme_bw()+ 
+  guides(colour=guide_legend(title="Crozier\nBQI\ncategory"), fill=guide_legend(title="Crozier\nBQI\ncategory"))+
+  theme_classic()+
+  ggtitle(("A"))+
+  theme(plot.margin = unit(c(1, 0, 2, 1),"lines"))
+print(p1_cbqi)
   
-      
-bqi_mod <- lm(BQI_A~hab_qual+bqi_cat+hab_qual*bqi_cat, data=bqi_pred_prod)
-summary(bqi_mod)
-anova(bqi_mod)
-
-bqi_mod <- lm(BQI_A~hab_qual, data=bqi_pred_prod)
-summary(bqi_mod)
-anova(bqi_mod)
 
 
-# including the last 6 years of breeders (still have to have bred a
+```
+Predict breeding success at Royds
+```{r pred BS at royds}
+# Predict breeding success at Cape Royds ####
+library(raster)
+r_area <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_subcol_area_rast.tif")
+ext_r<-extent(r_area)
+plot(r_area)
+# 
+# Need to change this to y n for model
+r_skua50<-crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_subcol_skua50m_bin.tif"),ext_r)
+plot(r_skua50)
+
+r_pa_ratio <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_subcol_pa_ratio_rast.tif"),ext_r)
+plot(r_pa_ratio)
+
+# r_aspect <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_aspect_corrected.tif"),ext_r)
+r_aspect <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_subcol_aspect.tif"),ext_r)
+
+plot(r_aspect)
+
+# r_slope <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_slope"),ext_r)
+r_slope <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_subcol_slope.tif"),ext_r)
+plot(r_slope)
+
+# r_elev <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_mosaic_dem-tile-0_clip_v2.tif"),ext_r)+46
+r_elev <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_subcol_elev.tif"),ext_r)+46
+plot(r_elev)
+
+# r_windshelt <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_windshelter300m.asc"),ext_r)
+r_windshelt <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_subcol_windshelt.tif"),ext_r)
+plot(r_windshelt)
+
+# r_flow <-log1p(crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_flow_acc_snow_v2.1.tif"),ext_r))
+r_flow <-log1p(crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_subcol_flow_acc.tif"),ext_r))
+plot(r_flow)
+
+# c_flow[c_flow==-Inf]<-NA
+
+
+royds_stack <- stack(r_area, r_skua50, r_pa_ratio,r_aspect,r_slope,r_elev,r_windshelt, r_flow)
+names(royds_stack)<-c("area","skua50","pa_ratio","mean_aspect","mean_slope","adjust_mean_elev","mean_windshelt","flow_acc_log1p")
+
+# Predict to all subcolonies at Crozier
+k=4
+r_base_pred <- gam(prod_anom~s(area, k=k) + s(pa_ratio, k=k)+s(adjust_mean_elev, k=k)+ s(mean_slope, k=k) +s(mean_aspect,k=k, bs="cc") +s(mean_windshelt,k=k)+s(flow_acc_log1p, k=k)+skua50, select=TRUE, data=filter(pred_dat,col=="royds"), method="ML")
+
+r_pred_anom <- predict(royds_stack,r_base_pred, type="response")
+
+plot(r_pred_anom, col=rev(rainbow(50, start = 0, end = 0.8, alpha = 1)),main="Predicted subcol quality")
+hist(r_pred_anom)
+mean(r_pred_anom@data@values, na.rm=TRUE)
+sd(r_pred_anom@data@values, na.rm=TRUE)/sqrt(sum(!is.na(r_pred_anom@data@values)))
+writeRaster(r_pred_anom, "Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_predict_subcol.tif", format="GTiff", overwrite=FALSE)
+
+# calcuated mean BS for last 4 years
+r_bs4 <- r_dat%>%
+  dplyr::select(season,subcol,prod)%>%
+  filter(season%in%c("1415","1516","1617","1718"))
+mean(r_bs4$prod)+mean(r_pred_anom@data@values, na.rm=TRUE)
+
+c_bs4 <- c_dat%>%
+  dplyr::select(season,subcol,prod)%>%
+  filter(season%in%c("1415","1516","1617","1718"))
+mean(c_bs4$prod, na.rm=TRUE)+mean(c_pred_anom@data@values, na.rm=TRUE)
+
+
+# read in Royds BQI location and predicted productivity data
+r_bqi_pred_prod <- read.csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/royds_bqi_pred_prod_loc.csv")
+p2_rbqi <- ggplot(r_bqi_pred_prod,aes(pred_prod,BQI_A))+
+  geom_point(size=1.8, col="black")+
+  geom_smooth(method=lm, color="black")+
+  labs(x="Habitat quality", y="Breeding quality index (BQI)", title="B")+
+  theme_classic()+
+  theme(plot.margin = unit(c(2, 5, 1, 1),"lines"))
+
+print(p2_rbqi)
+
+grid.arrange(p1_cbqi,p2_rbqi)
+
+# correlate Royds bqi to predicted habitat quality
+Hmisc::rcorr(r_bqi_pred_prod$BQI_A,r_bqi_pred_prod$pred_prod)
+
+
+
+```
+
+Distribution of pa-ratio
+```{r pa-ratio of all subcols}
+
+c_subcol <- read.csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/croz_all_subcol_2014.txt")%>%
+  mutate(r=sqrt(area/pi),pa_circ=2/r,resid=pa_ratio-pa_circ)
+
+ggplot(c_subcol,aes(area,resid))+
+  geom_point()+
+  geom_smooth(method="loess")
+
+ggplot(c_subcol,aes(area, pa_ratio))+
+  geom_point()+
+  geom_line(aes(area,pa_circ), col="blue")+
+  ylim(0,4)+
+  xlim(0,5000)+
+  geom_smooth(method="loess", col="green")
+
+```
