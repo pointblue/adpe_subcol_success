@@ -1,7 +1,7 @@
 ---
 title: "Analysis of variation in reproductive success by subcolony"
 author: "Annie Schmidt"
-date: "June 2, 2016"
+date: "Last edit 24-03-2020" 
 output:
   pdf_document: default
   html_document: default
@@ -125,10 +125,9 @@ col3="#5EA8A7" # lagoon
 # Subcol attr distributions fig ####
 # melt data for data vis
 subcol_attr <- all_dat%>%
-  dplyr::select(-flood_risk,-active_ct,-ch_ct,-prod, -skua50_yn,-flow_acc_log,-mean_windshelt100m,-mean_acr,-mean_acr_log,-flow_acc)%>%
-  # dplyr::slice(1)%>%
+  dplyr::select(col:subcol,area_name:area,pa_ratio,mean_aspect:skua50,flow_acc_log1p)%>%
   gather(attr,value=measurement,-col,-season,-area_name,-subcol)%>%
-  mutate(measurement=as.numeric(measurement),attr=factor(attr, labels=c("Elevation (m)","Area (m2)","Flow accumulation","AreaM","Aspect (deg)","Slope (deg)","Wind shelter index","Perim/Area ratio", "Skua 50m")))%>%
+  mutate(measurement=as.numeric(measurement),attr=factor(attr, labels=c("Elevation (m)","Area (m2)","Flow accumulation","Aspect (deg)","Slope (deg)","Wind shelter index","Perim/Area ratio", "Skua 50m")))%>%
   filter(!is.na(measurement))
 
 # label panels with significant difference
@@ -188,6 +187,9 @@ wilcox.test(pair_dat$`Skua 50m` [pair_dat$col=="croz"],pair_dat$`Skua 50m`[pair_
 mean(pair_dat$Aspect[pair_dat$col=="croz"])
 mean(pair_dat$Aspect[pair_dat$col=="royds"])
 
+mean(pair_dat$`Perim/Area ratio`[pair_dat$col=="croz"])
+mean(pair_dat$`Perim/Area ratio`[pair_dat$col=="royds"])
+
 # Test if proportion of subcol with skuas near is different
 croz_skua<- sum(pair_dat$`Skua 50m`[pair_dat$col=="croz"])
 n_croz<-length(pair_dat$`Skua 50m`[pair_dat$col=="croz"])
@@ -215,7 +217,7 @@ ggplot(aes(col, proportion, fill=col))+
            position=position_dodge())+
   geom_errorbar(aes(ymin=proportion-CI, ymax=proportion+CI), width=.1,
                  position=position_dodge(.9)) +
-  ylab("Proportion of subcolonies \n with skuas w/in 50m")+
+  ylab("Proportion of subcolonies /n with skuas w/in 50m")+
   xlab("")+
   scale_color_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
   scale_fill_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
@@ -536,7 +538,7 @@ hwe<- wthr%>%
   summarise(nobs=n())%>%
   ggplot(aes(season,nobs))+
   geom_bar(stat="identity")+
-  ylab("High Wind Events \n(# obs of >30mph)")
+  ylab("High Wind Events /n(# obs of >30mph)")
 
 
 # Plot of temperature
@@ -592,7 +594,7 @@ mean_prod<-all_dat%>%
   geom_errorbar(aes(ymin=mean_prod - se,ymax=mean_prod+se), width=.2,
                 position=position_dodge(.9))+
   xlab("Season")+
-  ylab("Mean Productivity \n(chicks fledged per pair)")
+  ylab("Mean Productivity /n(chicks fledged per pair)")
 
 
 var_prod<-all_dat%>%
@@ -866,7 +868,7 @@ ggplot(ann_prod_pred,aes(prod_anom,predict_base, colour=col))+
 #   # scale_colour_manual(values = c("Black", "lightgrey", "grey50"))
 #   scale_colour_grey(labels = c("High","Medium","Low"))+
 #   # theme_bw()+ 
-#   guides(colour=guide_legend(title="BQI\ncategory"))+
+#   guides(colour=guide_legend(title="BQI/ncategory"))+
 #   theme_classic()
   
 # c_ovp<-ggplot(croz_ann_prod,aes(prod_anom,predict_cbase_REML))+
@@ -921,7 +923,7 @@ New Figure 4 for revision
 
 # Making a new function to do this
 # need to predict each partial smooth and then plot
-plot.smooths <- function(x, data, model, ylim=NULL, xlim=NULL,xlab=NULL,ylab="Effect on\n breeding success",col_x, add){
+plot.smooths <- function(x, data, model, ylim=NULL, xlim=NULL,xlab=NULL,ylab="Effect on/n breeding success",col_x, add){
 #create a sequence of new data for variable of interest
 new_dat <- seq(min(data[,x]),max(data[,x]),length=nrow(data))
 # predict partial smooth
@@ -1029,7 +1031,7 @@ skua_mod<-ggplot(cr_skua,aes(skua50,coef,col=col))+
         axis.text=element_text(size=8),
         plot.margin = margin(17,10,0,1, "pt"),
         axis.title.x=element_text(margin = margin(t = 8, r = 0, b = 0, l = 0)))+
-  ylab("Effect on\n breeding success")+
+  ylab("Effect on/n breeding success")+
   xlab("Skua within 50m")+
   ylim(ylim)+
   scale_colour_manual(values=c(col1,col2),name="Colony",labels = c("Crozier","Royds"))
@@ -1320,7 +1322,7 @@ p1_cbqi <-ggplot(c_bqi_pred_prod,aes(pred_prod,BQI_A, color=bqi_cat))+
   scale_fill_brewer(palette="Paired",labels = c("High","Medium","Low"), aesthetics = c("colour", "fill"))+
   # scale_color_brewer(palette="Paired",labels = c("High","Medium","Low"))+
   # theme_bw()+ 
-  guides(colour=guide_legend(title="Crozier\nBQI\ncategory"), fill=guide_legend(title="Crozier\nBQI\ncategory"))+
+  guides(colour=guide_legend(title="Crozier/nBQI/ncategory"), fill=guide_legend(title="Crozier/nBQI/ncategory"))+
   theme_classic()+
   ggtitle(("A"))+
   theme(plot.margin = unit(c(1, 0, 2, 1),"lines"))
@@ -1419,17 +1421,52 @@ Distribution of pa-ratio
 ```{r pa-ratio of all subcols}
 
 c_subcol <- read.csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/croz_all_subcol_2014.txt")%>%
-  mutate(r=sqrt(area/pi),pa_circ=2/r,resid=pa_ratio-pa_circ)
+  mutate(r=sqrt(area/pi),pa_circ=2/r,resid=pa_ratio-pa_circ, col="croz")
+
+r_subcol <- read.csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/royds_all_subcol_2014.txt")%>%
+  mutate(r=sqrt(area/pi),pa_circ=2/r,resid=pa_ratio-pa_circ, col="royds")
+
+subcol<- c_subcol%>%
+  full_join(r_subcol)%>%
+  dplyr::select(col,perim, area, pa_ratio, r, pa_circ, resid)
 
 ggplot(c_subcol,aes(area,resid))+
   geom_point()+
   geom_smooth(method="loess")
 
-ggplot(c_subcol,aes(area, pa_ratio))+
+ggplot(subcol,aes(area, pa_ratio, col=col))+
   geom_point()+
-  geom_line(aes(area,pa_circ), col="blue")+
+  geom_line(aes(area,pa_circ))+
   ylim(0,4)+
-  xlim(0,5000)+
+  xlim(0,1000)+
   geom_smooth(method="loess", col="green")
+
+all_dat%>%
+  group_by(col, subcol)%>%
+  dplyr::slice(1)%>%
+ggplot(aes(area, col=col))+
+  geom_histogram()
+
+# pa-ratio of study subcolonies
+
+# data from with area and perimeter of circle
+circ <- data.frame(area=c(1:1500))
+circ$par=2/sqrt(circ$area/pi)
+circ$perim = 2*pi*sqrt(circ$area/pi)
+
+# plot
+ggplot(all_dat)+
+  geom_point(aes(area,perimeter, col=col))+
+  geom_line(data=circ,aes(area,perim))+
+  labs(x="Area",y="Perimeter")+
+  theme_classic()+
+  scale_colour_manual(values=c(col1,col2),name="Colony",labels = c("Crozier","Royds"))
+
+# proportion of subcolonies <250m
+subcol%>%
+  mutate(smaller=ifelse(area<=250,1,0))%>%
+  group_by(col, smaller)%>%
+  summarise(n=n())
+
 
 ```
