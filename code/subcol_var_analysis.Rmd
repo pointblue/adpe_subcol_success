@@ -1470,3 +1470,36 @@ subcol%>%
 
 
 ```
+Plot spatial covariates
+```{r Plot spatial covariates for both colonies}
+# read in spatial layers for Crozier
+
+library(raster)
+c_area <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/covar_raster_stack/croz_all_subcol_2014_area_rast.tif")
+ext<-extent(c_area)
+plot(c_area)
+
+# Need to change this to y n for model
+c_skua50<-crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/covar_raster_stack/croz_all_subcol_2014_skua50mbin_rast.tif"),ext)
+plot(c_skua50)
+
+c_pa_ratio <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/covar_raster_stack/croz_all_subcol_2014_pa_ratio_rast.tif"),ext)
+plot(c_pa_ratio)
+
+c_aspect <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_subcol_aspect.tif"),ext)
+plot(c_aspect)
+
+c_slope <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_subcol_slope.tif"),ext)
+plot(c_slope)
+
+c_elev <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_subcol_elev.tif"),ext)+47
+plot(c_elev)
+
+c_windshelt <- crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_subcol_windselt.tif"),ext)
+plot(c_windshelt)
+
+c_flow_all <-log1p(crop(raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_flowacc_snow_v4.tif"),ext))
+plot(c_flow)
+
+
+
