@@ -14,6 +14,8 @@ library(ggplot2)
 library(lubridate)
 library(readr)
 
+# Set working directory
+setwd("Z:/Informatics/S031/analyses/aschmidt/subcol_var")
 # Start loading in data----
 
 #1415
@@ -122,11 +124,11 @@ r_elev_14_format <- r_elev_14_raw%>%
 # r_wind_14_format<- read.csv("data/royds_wind.txt", header=TRUE)%>%
 #   select(subcol=royd_subco,mean_wind=MEAN)
 
-r_windshelt_14_format <- read.csv("data/royds_mean_windshelter100m.csv",header=TRUE)%>%
-  select(subcol=SUBCOL, mean_windshelt100m=MEAN)
+# r_windshelt_14_format <- read.csv("data/royds_mean_windshelter100m.csv",header=TRUE)%>%
+  # select(subcol=SUBCOL, mean_windshelt100m=MEAN)
 
-r_windshelt_14_300mformat <- read.csv("data/royds_mean_windshelter300m_2pi_v1.csv",header=TRUE)%>%
-  dplyr::select(subcol, mean_windshelt300m=MEAN)
+r_windshelt_14_300mformat <- read.csv("data/royds_mean_windshelt_rev2_v2.txt",header=TRUE)%>%
+  dplyr::select(subcol=SUBCOL, mean_windshelt300m=MEAN)
  
 # load slope stats
 r_slope_14_format <- read.csv("data/royds_mean_slope.csv", header=TRUE)%>%
@@ -148,7 +150,7 @@ r_skua50_format <- read.csv("data/royds_skua_50m.csv")%>%
 # 
 # # combine all 2014 measurement data
 
-r_list_14 <- list(r_geom_14_format,r_flow_acc_14_snowformat,r_aspect_14_format,r_slope_14_format,r_elev_14_format,r_windshelt_14_format,r_windshelt_14_300mformat, r_skua50_format)
+r_list_14 <- list(r_geom_14_format,r_flow_acc_14_snowformat,r_aspect_14_format,r_slope_14_format,r_elev_14_format,r_windshelt_14_300mformat, r_skua50_format)
 r_all_meas_14 <- as.data.frame(r_list_14[1])
 for(i in 1:(length(r_list_14)-1)){
   a = data.frame(r_list_14[i+1])
@@ -172,5 +174,5 @@ anti_join(r_ct_all4,r_all_meas_ct)
 
 # 
 # write data to file
-write.csv(r_all_meas_ct, "data/royds_selected_meas_ct_all_v9.csv", row.names = FALSE)
+write.csv(r_all_meas_ct, "data/royds_selected_meas_ct_all_v11.csv", row.names = FALSE)
 

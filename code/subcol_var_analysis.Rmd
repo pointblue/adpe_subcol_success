@@ -29,26 +29,13 @@ lapply(list.of.packages, library, character.only = TRUE)
 #Set working directory
 setwd("Z:/Informatics/S031/analyses/aschmidt/subcol_var")
 
-  
-# Define functions #### 
-# correlation matrix of data
-panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
-    usr <- par("usr"); on.exit(par(usr))
-    par(usr = c(0, 1, 0, 1))
-    r <- cor(x, y, use="complete.obs")
-    txt <- format(c(r, 0.123456789), digits = digits)[1]
-    txt <- paste0(prefix, txt)
-    if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
-    text(0.5, 0.5, txt, cex = cex.cor * abs(r))
-}
-
 
 # read in count data files with subcolony attributes (created by croz(royd)_subcol_ct_data_prep.R) ####
 # Crozier
 c_ct_meas <- read_csv("data/croz_selected_meas_ct_all_v16.csv")
 
 # Royds
-r_ct_meas <- read_csv("data/royds_selected_meas_ct_all_v9.csv")
+r_ct_meas <- read_csv("data/royds_selected_meas_ct_all_v11.csv")
 
 
 ```
@@ -86,11 +73,11 @@ r_dat[r_dat$subcol=="1b","flow_acc_log1p"]=log1p(0)
 # # wind shelt to -0.016
 # windshelt 300m 2pi = 0.0262
 # windshelt 300m 14pi8 = 0.1538
-r_dat[r_dat$subcol=="1b","mean_windshelt"]=0.0262
+# r_dat[r_dat$subcol=="1b","mean_windshelt"]=0.0262
 # aspect to 253.100
 r_dat[r_dat$subcol=="1b","mean_aspect"]=253.100
 # elevation to -45.248047+47
-r_dat[r_dat$subcol=="1b","adjust_mean_elev"]=-45.248047+46
+r_dat[r_dat$subcol=="1b","adjust_mean_elev"]=-45.248047+47 ####check this####
 
 # data.frame(filter(r_dat,subcol=="1b"))
 
@@ -100,20 +87,32 @@ all_dat <- c_dat%>%
   full_join(r_dat)%>%
   mutate(subcol=as.factor(subcol), col=as.factor(col),skua50_yn=factor(skua50_yn), season=factor(season))
 
-
-# scale all data to make model fitting easier
-all_dat_scale <- all_dat%>%
-  mutate_at(vars(active_ct,prod,area,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_windshelt,flow_acc,flow_acc_log1p),funs(as.numeric))%>%
-  mutate_at(vars(active_ct,prod,area,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_windshelt,flow_acc,flow_acc_log1p,mean_acr, mean_acr_log),funs(scale))
+# 
+# # scale all data to make model fitting easier
+# all_dat_scale <- all_dat%>%
+#   mutate_at(vars(active_ct,prod,area,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_windshelt,flow_acc,flow_acc_log1p),funs(as.numeric))%>%
+#   mutate_at(vars(active_ct,prod,area,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_windshelt,flow_acc,flow_acc_log1p,mean_acr, mean_acr_log),funs(scale))
 
 
 ```            
 
 Data vis
 ```{r figs}
+# Check covariate correlation
+# Define functions #### 
+# correlation matrix of data
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- cor(x, y, use="complete.obs")
+    txt <- format(c(r, 0.123456789), digits = digits)[1]
+    txt <- paste0(prefix, txt)
+    if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+    text(0.5, 0.5, txt, cex = cex.cor * abs(r))
+}
 
 pairs(c_dat[,c("prod","area","pa_ratio","mean_slope","mean_aspect","adjust_mean_elev", "mean_windshelt","flow_acc_log1p")],lower.panel = panel.smooth, upper.panel = panel.cor)
-
+pairs(r_dat[,c("prod","area","pa_ratio","mean_slope","mean_aspect","adjust_mean_elev", "mean_windshelt","flow_acc_log1p")],lower.panel = panel.smooth, upper.panel = panel.cor)
 
 
 # Color for Crozier
@@ -153,10 +152,12 @@ ggplot(aes(attr,measurement, fill=col,color=col))+
         strip.placement.y="outside",
     strip.background = element_blank(),
                      panel.grid.major = element_blank(),
-                     panel.grid.minor = element_blank(), panel.border=element_blank(),axis.line= element_line(colour = "black"),axis.text.x=element_blank(),panel.spacing = unit(1.5, "lines"))+
+                     panel.grid.minor = element_blank(), panel.border=element_blank(),axis.line= element_line(colour = "black"),axis.text.x=element_blank(),panel.spacing = unit(1.5, "lines"),
+    text=element_text(size=24))+
+    # legend.position="none")+
   guides(fill=guide_legend(title="Colony"))+
   geom_text(data=attr_sig,aes(label=sig),show.legend=FALSE, x=Inf,y=Inf,hjust = 3,
-    vjust = 1.5,size=8,inherit.aes = FALSE)
+    vjust = 1.5,size=8,inherit.aes = FALSE) # add stars for significant difference
 
 # Note, added skua panel separately in illustrator because couldn't figure out how to do it easily in R
 # Skua panel: see below
@@ -175,17 +176,17 @@ pair_dat%>%
 
 c_dat$prod[c_dat$area_name=="m"]
 # Most variables not normal so used Mann-Whitney U test
-wilcox.test(pair_dat$Elevation[pair_dat$col=="croz"],pair_dat$Elevation[pair_dat$col=="royds"])
-wilcox.test(pair_dat$Area[pair_dat$col=="croz"],pair_dat$Area[pair_dat$col=="royds"])
+wilcox.test(pair_dat$`Elevation (m)`[pair_dat$col=="croz"],pair_dat$`Elevation (m)`[pair_dat$col=="royds"])
+wilcox.test(pair_dat$`Area (m2)`[pair_dat$col=="croz"],pair_dat$`Area (m2)`[pair_dat$col=="royds"])
 wilcox.test(pair_dat$`Flow accumulation`[pair_dat$col=="croz"],pair_dat$`Flow accumulation`[pair_dat$col=="royds"])
-wilcox.test(pair_dat$Aspect[pair_dat$col=="croz"],pair_dat$Aspect[pair_dat$col=="royds"])
-wilcox.test(pair_dat$Slope[pair_dat$col=="croz"],pair_dat$Slope[pair_dat$col=="royds"]) # not significant
-wilcox.test(pair_dat$`Wind shelter`[pair_dat$col=="croz"],pair_dat$`Wind shelter`[pair_dat$col=="royds"]) 
+wilcox.test(pair_dat$`Aspect (deg)`[pair_dat$col=="croz"],pair_dat$`Aspect (deg)`[pair_dat$col=="royds"])
+wilcox.test(pair_dat$`Slope (deg)`[pair_dat$col=="croz"],pair_dat$`Slope (deg)`[pair_dat$col=="royds"]) # not significant
+wilcox.test(pair_dat$`Wind shelter index`[pair_dat$col=="croz"],pair_dat$`Wind shelter index`[pair_dat$col=="royds"]) 
 wilcox.test(pair_dat$`Perim/Area ratio`[pair_dat$col=="croz"],pair_dat$`Perim/Area ratio`[pair_dat$col=="royds"])
 wilcox.test(pair_dat$`Skua 50m` [pair_dat$col=="croz"],pair_dat$`Skua 50m`[pair_dat$col=="royds"])
 
-mean(pair_dat$Aspect[pair_dat$col=="croz"])
-mean(pair_dat$Aspect[pair_dat$col=="royds"])
+mean(pair_dat$`Aspect (deg)`[pair_dat$col=="croz"])
+mean(pair_dat$`Aspect (deg)`[pair_dat$col=="royds"])
 
 mean(pair_dat$`Perim/Area ratio`[pair_dat$col=="croz"])
 mean(pair_dat$`Perim/Area ratio`[pair_dat$col=="royds"])
@@ -196,7 +197,7 @@ n_croz<-length(pair_dat$`Skua 50m`[pair_dat$col=="croz"])
 royds_skua <- sum(pair_dat$`Skua 50m`[pair_dat$col=="royds"])
 n_royds <- length(pair_dat$`Skua 50m`[pair_dat$col=="royds"])
 
-# Having trouble making the skua panel so doingn it manually here
+# Having trouble making the skua panel so doing it manually here
 # data frame with proportions and CI
 prop_skua <- data.frame(croz_skua,n_croz,prop_croz=croz_skua/n_croz,royds_skua,n_royds,prop_royds=royds_skua/n_royds)
 # Proportion margin of error
@@ -212,23 +213,23 @@ prop_skua%>%
   select(prop_croz,prop_royds)%>%
   gather(key=col, value=proportion)%>%
   mutate(CI=c(prop_skua$croz_CI,prop_skua$royds_CI))%>%
-ggplot(aes(col, proportion, fill=col))+ 
+ggplot(aes(col, proportion, fill=col, color=col))+ 
   geom_bar(stat="identity", 
-           position=position_dodge())+
+           position=position_dodge(), alpha=0.6, size=1.1)+
   geom_errorbar(aes(ymin=proportion-CI, ymax=proportion+CI), width=.1,
-                 position=position_dodge(.9)) +
-  ylab("Proportion of subcolonies /n with skuas w/in 50m")+
+                 position=position_dodge(.9), size=1.1) +
+  ylab("Proportion of subcolonies near skuas")+
   xlab("")+
-  scale_color_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
-  scale_fill_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
+  scale_color_manual(values=c(col1,col2),guide="none")+
+  scale_fill_manual(values=c(col1,col2),guide="none")+
   # guides(fill=guide_legend(title="Colony"),color=guide_legend(title="Colony"))+
   theme_classic()+
   theme(strip.placement.x = "outside",
         strip.placement.y="outside",
     strip.background = element_blank(),
                      panel.grid.major = element_blank(),
-                     panel.grid.minor = element_blank(), panel.border=element_blank(),axis.line= element_line(colour = "black"),axis.text.x=element_blank(),panel.spacing = unit(1.5, "lines"))+
-  guides(fill=guide_legend(title="Colony"))+
+                     panel.grid.minor = element_blank(), panel.border=element_blank(),axis.line= element_line(colour = "black"),axis.text.x=element_blank(),panel.spacing = unit(1.5, "lines"),
+    text=element_text(size=24))+
   geom_text(data=attr_sig,aes(label=sig),show.legend=FALSE, x=Inf,y=Inf,hjust = 3,
     vjust = 1.5,size=8,inherit.aes = FALSE)
 
@@ -357,6 +358,7 @@ summ_cts_yr <- all_dat%>%
 # Difference in means for whole time series
 t_cr_all <- t.test(c_ct_meas$prod, r_ct_all$prod)
 # fit gls model to test for differences in means
+# requires library()
 nestinginfo <- groupedData(prod ~ col | subcol, data= cr_count_all)
 fit.compsym <- gls(prod ~ factor(col), data=nestinginfo, corr=corCompSymm(,form= ~ 1 | subcol))
 summary(fit.compsym)
@@ -402,12 +404,6 @@ pairs(c_dat_corr[,c("area","pa_ratio","mean_slope","mean_aspect","adjust_mean_el
 
 pairs(r_dat_corr[,c("area","pa_ratio","mean_slope","mean_aspect","adjust_mean_elev", "mean_windshelt","flow_acc_log1p")],lower.panel = panel.smooth, upper.panel = panel.cor)
 
-####
-ggplot(c_dat, aes(season,prod, fill=m))+
-  geom_boxplot()
-
-ggplot(c_dat, aes(m,prod, fill=m))+
-  geom_boxplot()
 
 c_dat%>%
   filter(season%in%c("1415","1516","1617","1718"))%>%
@@ -418,10 +414,10 @@ ggplot(aes(area_name,prod))+
 t.test(c_dat$prod[c_dat$m=="y"],c_dat$prod[c_dat$m=="n"])
 # test between M and area with highest mean (qr): not significant
 t.test(c_dat$prod[c_dat$area_name=="m"],c_dat$prod[c_dat$area_name=="qr"])
-# test between M and loweset mean (l): significant
+# test between M and loweset mean (l): not significant
 t.test(c_dat$prod[c_dat$area_name=="m"],c_dat$prod[c_dat$area_name=="l"])
 # test between highest (qr) and lowest (l): significant
-names(t.test(c_dat$prod[c_dat$area_name=="qr"],c_dat$prod[c_dat$area_name=="l"]))
+t.test(c_dat$prod[c_dat$area_name=="qr"],c_dat$prod[c_dat$area_name=="l"])
 
 
 # M time series plot
@@ -429,7 +425,6 @@ c_ct_meas%>%
   mutate(season=factor(season), m_not=ifelse(area_name=="m","m","other"))%>%
   ggplot(aes(season,prod, fill=m_not))+
   geom_boxplot()
-
 
 
 # plot ave by subcol
@@ -508,110 +503,6 @@ plot.gam(c_var_gam, shade=TRUE, residuals=TRUE, cex=2)
   
 rcorr(var_by_area$area, var_by_area$var)
 
-
-
-
-# Plot weather data ####
-# Read in weather data 
-wthr <- read.csv("data/weather_summary_1415-1718.csv", header=TRUE)%>%
-  mutate(season=factor(season), DATE=as.Date(DATE),jdate=as.POSIXlt(DATE)$yday)%>%
-  filter(jdate>333&jdate<=365)
-wind_dir <- c("N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW")
-spd <-30
-
-# Plots of wind speed and direction ####
-
-# Plot number of times each direction recorded
-wthr%>%
-  filter(!is.na(GUSTMPH))%>%
-  group_by(season, DIR)%>%
-  summarise(perc_days=n()/nrow(.))%>%
-dplyr::slice(match(wind_dir,DIR))%>%
-  ggplot(aes(DIR, perc_days))+
-  geom_bar(stat="identity")+
-  facet_wrap(~season, nrow=4)
-
-# Plot direction of high wind events
-hwe<- wthr%>%
-  filter(GUSTMPH>spd)%>%
-  group_by(season)%>%
-  summarise(nobs=n())%>%
-  ggplot(aes(season,nobs))+
-  geom_bar(stat="identity")+
-  ylab("High Wind Events /n(# obs of >30mph)")
-
-
-# Plot of temperature
-p_temp<-wthr%>%
-  group_by(DATE)%>%
-  arrange(LOWTEMP)%>%
-  dplyr::slice(1)%>%
-  group_by(season)%>%
-  summarise(mean_lowtemp=mean(LOWTEMP, na.rm=TRUE),se=sd(LOWTEMP, na.rm=TRUE)/sqrt(n()))%>%
-  ggplot(aes(season,mean_lowtemp))+
-           geom_bar(stat="identity")+  
-  geom_errorbar(aes(ymin=mean_lowtemp - se,ymax=mean_lowtemp+se), width=.2,
-                position=position_dodge(.9))+
-  xlab("Season")+
-  ylab("Mean Low Temp (Dec)")
-# +
-#   guides(fill=guide_legend(title=NULL))+
-#   scale_fill_manual(values=c("deeppink","seagreen3"),name=NULL,breaks=c("CL", "RL"),labels=c("Control Levee", "Restored Levee"))
-
-
-temp <- wthr%>%
-  group_by(DATE)%>%
-  arrange(LOWTEMP)%>%
-  dplyr::slice(1)%>%
-  group_by(season)
-
-t.test(temp$LOWTEMP[temp$season=="1415"],temp$LOWTEMP[temp$season=="1516"]) # significant
-t.test(temp$LOWTEMP[temp$season=="1516"],temp$LOWTEMP[temp$season=="1617"])
-t.test(temp$LOWTEMP[temp$season=="1617"],temp$LOWTEMP[temp$season=="1718"])
-t.test(temp$LOWTEMP[temp$season=="1516"],temp$LOWTEMP[temp$season=="1718"])
-t.test(temp$LOWTEMP[temp$season=="1415"],temp$LOWTEMP[temp$season=="1617"])
-t.test(temp$LOWTEMP[temp$season=="1415"],temp$LOWTEMP[temp$season=="1718"]) # significant
-
-
-# Number of observations with snow
-
-snow_days <- wthr%>%
-  filter(str_detect(NOTES, "snow|Snow|SNOW"))%>%
-  group_by(season, DATE)%>%
-  dplyr::slice(1)%>%
-  group_by(season)%>%
-  summarise(snow_days=n())%>%
-  ggplot(aes(season,snow_days))+
-  geom_bar(stat="identity")+
-  xlab("Season")+
-  ylab("Snow days")
-
-mean_prod<-all_dat%>%
-  group_by(col,season)%>%
-  summarise(mean_prod=mean(prod, na.rm=TRUE),se=sd(prod, na.rm=TRUE)/sqrt(n()))%>%
-  ggplot(aes(season,mean_prod,fill=col))+
-           geom_bar(stat="identity", position="dodge")+  
-  geom_errorbar(aes(ymin=mean_prod - se,ymax=mean_prod+se), width=.2,
-                position=position_dodge(.9))+
-  xlab("Season")+
-  ylab("Mean Productivity /n(chicks fledged per pair)")
-
-
-var_prod<-all_dat%>%
-  group_by(col,season)%>%
-  summarise(var_prod=var(prod, na.rm=TRUE))%>%
-  ggplot(aes(season,var_prod, fill=col))+
-           geom_bar(stat="identity", position="dodge")+
-  xlab("Season")+
-  ylab("Variance in Productivity")
-
-
-grid.arrange(grobs=list(mean_prod,hwe, p_temp), nrow=4)
-
-
-plot(c_dat$mean_slope,c_dat$mean_TRI)
-rcorr(c_dat$mean_slope,c_dat$mean_TRI)
-
 ```
 
 Crozier GAM
@@ -664,22 +555,32 @@ Gamms for Royds
 # set k for royds
 rk=4
 # Fit model with no interactions
-r_base_anom <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc") +s(mean_windshelt,k=rk)+s(flow_acc_log1p, k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
-summary(r_base_anom)
-plot.gam(r_base_anom, pages=1)
+r_base_anom <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_windshelt,k=rk)+s(mean_aspect,k=rk, bs="cc") +s(flow_acc_log1p, k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
 
-summary(r_base_anom)
+r_base_anom_1 <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_windshelt,k=rk) +s(flow_acc_log1p, k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
+summary(r_base_anom_1)
+plot.gam(r_base_anom, pages=1)
 plot.gam(r_base_anom, pages=1, shade=T, residuals=T)
+
 gam.check(r_base_anom) # looks pretty good, some skew in the residuals
-f
+
+r_base_anom_2 <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc") +s(flow_acc_log1p, k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
+
+summary(r_base_anom_2)
+plot.gam(r_base_anom_2, pages=1)
+plot.gam(r_base_anom_2, pages=1, shade=T, residuals=T)
 
 # fit model with seasonal interactions
-r_seasonx_anom <-  gam(prod_anom~s(area,k=rk) + s(pa_ratio,k=rk)+ s(adjust_mean_elev,by=season, k=rk)+s(mean_slope,by=season,k=rk) +s(mean_aspect, by=season,bs="cc", k=rk) +s(mean_windshelt,by=season,k=rk)+ s(flow_acc_log1p,by=season,k=3)+ skua50*season, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
+r_seasonx_anom_1 <-  gam(prod_anom~s(area,k=rk) + s(pa_ratio,k=rk)+ s(adjust_mean_elev,by=season, k=rk)+s(mean_slope,by=season,k=rk) +s(mean_windshelt,by=season,k=rk)+ s(flow_acc_log1p,by=season,k=3)+ skua50*season, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
 summary(r_seasonx_anom)
 plot(r_seasonx_anom, pages=2, shade=TRUE)
 
+r_seasonx_anom_2 <-  gam(prod_anom~s(area,k=rk) + s(pa_ratio,k=rk)+ s(adjust_mean_elev,by=season, k=rk)+s(mean_slope,by=season,k=rk) +s(mean_aspect, by=season,bs="cc", k=rk) + s(flow_acc_log1p,by=season,k=3)+ skua50*season, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
+summary(r_seasonx_anom)
+
+
 library(bbmle)
-r_mod_tab<-AICctab(r_base_anom,r_seasonx_anom,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
+r_mod_tab<-AICctab(r_base_anom,r_base_anom_1,r_base_anom_2,r_seasonx_anom_1,r_seasonx_anom_2,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
 
 
 ```

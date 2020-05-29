@@ -13,11 +13,7 @@ library(RStoolbox)
 
 #### Start Here ##############################################################
 
-
-# base map
-w <- map_data("worldHires", ylim = c(25,55), xlim = c(-140,-115))
-
-# Make figure for Crozier first #
+# Make figure for Crozier ####
 # Read in and format Crozier data ####
 # crozier boundary
 croz_bound <- readOGR("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_outer_bound.shp")
@@ -26,17 +22,17 @@ proj <-"+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
 croz_bound_t <- spTransform(croz_bound,proj)
 ext <- extent(croz_bound_t)+0.0002
 # aspect
-aspect <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_aspect_corrected.tif")
-aspect_t <- crop(projectRaster(aspect, crs=proj),ext)
-aspect_spdf <- as(aspect_t, "SpatialPixelsDataFrame")
-aspect_df <- as.data.frame(aspect_spdf)%>%
+c_aspect <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_aspect_corrected.tif")
+c_aspect_t <- crop(projectRaster(c_aspect, crs=proj),ext)
+c_aspect_spdf <- as(c_aspect_t, "SpatialPixelsDataFrame")
+c_aspect_df <- as.data.frame(c_aspect_spdf)%>%
   rename(value=croz_aspect_corrected)%>%
   mutate(value=ifelse(value<0,NA,value))
 
 # slope
-slope <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_slope.tif")
-slope_t <- crop(projectRaster(slope, crs=proj),ext)
-slope_df <- as.data.frame(as(slope_t, "SpatialPixelsDataFrame"))%>%
+c_slope <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_slope.tif")
+c_slope_t <- crop(projectRaster(c_slope, crs=proj),ext)
+c_slope_df <- as.data.frame(as(c_slope_t, "SpatialPixelsDataFrame"))%>%
   rename(value=croz_slope)%>%
   mutate(value=ifelse(value<0,NA,value))
 
@@ -71,15 +67,15 @@ skua_df <- as.data.frame(as(skua_t, "SpatialPixelsDataFrame"))%>%
 
 
 
-# make plots ####
+# make Crozier plots ####
 ## colors 
 # col.p <- c("#035aa1","#72ABD0","white","#FDBF71","#d40404") # 
 col.p <- c("#006C84","#5EA8A7","#B2DBD5","white")
 
 # col.p <- c("#205682","#72ABD0","white","#FDBF71","#F94943")
 
-p.aspect<- ggplot() +  
-  geom_raster(data=aspect_df, aes(x=x, y=y, fill=value), alpha=0.8)+
+p.c_aspect<- ggplot() +  
+  geom_raster(data=c_aspect_df, aes(x=x, y=y, fill=value), alpha=0.8)+
   geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
   fill=NA, col="white",size=1) +
   scale_fill_gradientn(colors=col.p,limits =c(0,360), "Aspect (°)") +
@@ -94,11 +90,11 @@ p.aspect<- ggplot() +
         legend.title = element_text(colour="white"),
         axis.text=element_blank(),
         axis.ticks = element_blank())
-plot(p.aspect)
+plot(p.c_aspect)
 
 
-p.slope<- ggplot() +  
-  geom_raster(data=slope_df, aes(x=x, y=y, fill=value), alpha=0.8)+
+p.c_slope<- ggplot() +  
+  geom_raster(data=c_slope_df, aes(x=x, y=y, fill=value), alpha=0.8)+
   geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
                fill=NA, col="white",size=1) +
   scale_fill_gradientn(colors=col.p,limits =c(0,30), "Slope (°)") +
@@ -113,7 +109,7 @@ p.slope<- ggplot() +
         legend.title = element_text(colour="white"),
         axis.text=element_blank(),
         axis.ticks = element_blank())
-# plot(p.slope)
+# plot(p.c_slope)
 
 
 p.elev<- ggplot() +  
@@ -245,14 +241,14 @@ plot(p.subcol)
 ### put everything together
 cairo_pdf(file=paste("croz_covariate_map_fig", format(Sys.time(), "%Y-%m-%d"), "pdf", sep = "."),width=12,height=12)
 
-grid.arrange(p.aspect,p.slope,p.elev,p.flow,p.wind,p.subcol,
+grid.arrange(p.c_aspect,p.c_slope,p.elev,p.flow,p.wind,p.subcol,
              ncol = 3, nrow = 4, 
              layout_matrix = rbind(c(1,2,3), c(4,6,6),c(5,6,6)))
 dev.off()
 
 
 jpeg(file=paste("croz_covariates", "jpeg", sep = "."),units="in",width=12,height=14, res=500)
-grid.arrange(p.aspect,p.slope,p.elev,p.flow,p.wind,p.subcol,
+grid.arrange(p.c_aspect,p.c_slope,p.elev,p.flow,p.wind,p.subcol,
              ncol = 3, nrow = 4, 
              layout_matrix = rbind(c(1,2,3), c(4,6,6),c(5,6,6)))
 dev.off()
@@ -261,32 +257,35 @@ dev.off()
 # Royds Figure ####
 # Read in and format Royds data ####
 # Royds boundary
-royds_bound <- readOGR(""Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_outer_bound_rev2.shp"")
-
+royds_bound <- readOGR("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_outer_bound_rev2.shp")
+# set projection
 proj <-"+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
-croz_bound_t <- spTransform(croz_bound,proj)
-ext <- extent(croz_bound_t)+0.0002
+royds_bound_t <- spTransform(royds_bound,proj)
+# save extent to use for other layers
+r_ext <- extent(royds_bound_t)
+
+
 # aspect
-aspect <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_aspect_corrected.tif")
-aspect_t <- crop(projectRaster(aspect, crs=proj),ext)
-aspect_spdf <- as(aspect_t, "SpatialPixelsDataFrame")
-aspect_df <- as.data.frame(aspect_spdf)%>%
-  rename(value=croz_aspect_corrected)%>%
+r_aspect <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/rev2/royds_aspect_corrected.tif")
+r_aspect_t <- crop(projectRaster(aspect, crs=proj),r_ext)
+r_aspect_spdf <- as(r_aspect_t, "SpatialPixelsDataFrame")
+r_aspect_df <- as.data.frame(r_aspect_spdf)%>%
+  rename(value=royds_aspect_corrected)%>%
   mutate(value=ifelse(value<0,NA,value))
 
 # slope
-slope <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_slope.tif")
-slope_t <- crop(projectRaster(slope, crs=proj),ext)
-slope_df <- as.data.frame(as(slope_t, "SpatialPixelsDataFrame"))%>%
-  rename(value=croz_slope)%>%
+r_slope <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/rev2/royds_slope.tif")
+r_slope_t <- crop(projectRaster(r_slope, crs=proj),r_ext)
+r_slope_df <- as.data.frame(as(r_slope_t, "SpatialPixelsDataFrame"))%>%
+  rename(value=royds_slope)%>%
   mutate(value=ifelse(value<0,NA,value))
 
 # elevation
-elev <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_dem_clip_windshelter_grid.asc")+47
-elev_t <- crop(projectRaster(elev, crs=proj),ext)
-elev_df <- as.data.frame(as(elev_t, "SpatialPixelsDataFrame"))%>%
-  rename(value=croz_dem_clip_windshelter_grid)%>%
-  mutate(value=ifelse(value<0,NA,value))
+r_elev <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_mosaic_dem-tile-0_clip.tif")+46
+r_elev_t <- crop(projectRaster(r_elev, crs=proj),r_ext)
+r_elev_df <- as.data.frame(as(r_elev_t, "SpatialPixelsDataFrame"))%>%
+  rename(value=royds_mosaic_dem.tile.0_clip)%>%
+  mutate(value=ifelse(value<0,0,value))
 
 # flow accumulation
 flow <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_flowacc_snow_v2.tif")
@@ -312,16 +311,16 @@ skua_df <- as.data.frame(as(skua_t, "SpatialPixelsDataFrame"))%>%
 
 
 
-# make plots ####
+# Make Royds plots ####
 ## colors 
 # col.p <- c("#035aa1","#72ABD0","white","#FDBF71","#d40404") # 
 col.p <- c("#006C84","#5EA8A7","#B2DBD5","white")
 
 # col.p <- c("#205682","#72ABD0","white","#FDBF71","#F94943")
 
-p.aspect<- ggplot() +  
-  geom_raster(data=aspect_df, aes(x=x, y=y, fill=value), alpha=0.8)+
-  geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
+p.r_aspect<- ggplot() +  
+  geom_raster(data=r_aspect_df, aes(x=x, y=y, fill=value), alpha=0.8)+
+  geom_polygon(data=royds_bound_t, aes(x=long, y=lat, group=group),
                fill=NA, col="white",size=1) +
   scale_fill_gradientn(colors=col.p,limits =c(0,360), "Aspect (°)") +
   theme(legend.position=c("right")) +
@@ -335,14 +334,14 @@ p.aspect<- ggplot() +
         legend.title = element_text(colour="white"),
         axis.text=element_blank(),
         axis.ticks = element_blank())
-plot(p.aspect)
+plot(p.r_aspect)
 
 
-p.slope<- ggplot() +  
-  geom_raster(data=slope_df, aes(x=x, y=y, fill=value), alpha=0.8)+
-  geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
+p.r_slope<- ggplot() +  
+  geom_raster(data=r_slope_df, aes(x=x, y=y, fill=value), alpha=0.8)+
+  geom_polygon(data=royds_bound_t, aes(x=long, y=lat, group=group),
                fill=NA, col="white",size=1) +
-  scale_fill_gradientn(colors=col.p,limits =c(0,30), "Slope (°)") +
+  scale_fill_gradientn(colors=col.p,limits =c(0,45), "Slope (°)") +
   theme(legend.position="right") +
   # theme(legend.key.width=unit(1, "cm"))+
   theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
@@ -354,14 +353,14 @@ p.slope<- ggplot() +
         legend.title = element_text(colour="white"),
         axis.text=element_blank(),
         axis.ticks = element_blank())
-# plot(p.slope)
+plot(p.r_slope)
 
 
-p.elev<- ggplot() +  
-  geom_raster(data=elev_df, aes(x=x, y=y, fill=value))+
-  geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
+p.r_elev<- ggplot() +  
+  geom_raster(data=r_elev_df, aes(x=x, y=y, fill=value))+
+  geom_polygon(data=royds_bound_t, aes(x=long, y=lat, group=group),
                fill=NA, col="white",size=1) +
-  scale_fill_gradientn(colors=col.p,limits =c(0,225), "Elevation (m)") +
+  scale_fill_gradientn(colors=col.p,limits =c(0,25), "Elevation (m)") +
   theme(legend.position="right") +
   # theme(legend.key.width=unit(1, "cm"))+
   theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
@@ -372,7 +371,7 @@ p.elev<- ggplot() +
         legend.text = element_text(colour="white"),
         legend.title = element_text(colour="white"), axis.text=element_blank(),
         axis.ticks = element_blank())
-# plot(p.elev)
+plot(p.r_elev)
 
 
 p.flow<- ggplot() +  

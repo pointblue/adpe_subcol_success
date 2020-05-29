@@ -98,7 +98,7 @@ subcol_aspect_summ <- subcol_aspect_extract%>%
 
 # Repeat for Royds subcol ####
 # read in 
-# royds_aspect_raw <-raster("V:/Project/Terrestrial/adpe/aschmidt/royds_GIS_layers/royds_aspect.tif")
+royds_aspect_raw <-raster("V:/Project/Terrestrial/adpe/aschmidt/royds_GIS_layers/royds_aspect.tif")
 # get lower left coordinates from raster
 r_xll <- royds_aspect_raw@extent@xmin
 r_yll <- royds_aspect_raw@extent@ymin
@@ -126,25 +126,25 @@ writeRaster(r_aspect_corr_rast,"V:/Project/Terrestrial/adpe/aschmidt/royds_GIS_l
 # Brought the above raster into GIS project and extracted aspect values for all cells in subcolonies (using subcolony raster layer and extract tool)
 # In this extracted file, SRCID_FEAT = 
 
-# r_subcol_aspect_extract <-read.csv("V:/Project/Terrestrial/adpe/aschmidt/royds_GIS_layers/royds_aspect_corrected_extract.txt", header=TRUE)
-r_subcol_aspect_extract <-read.csv("V:/Project/Terrestrial/adpe/aschmidt/royds_GIS_layers/royds_aspect_corrected_extract.csv", header=TRUE)
-
-
+# # r_subcol_aspect_extract <-read.csv("V:/Project/Terrestrial/adpe/aschmidt/royds_GIS_layers/royds_aspect_corrected_extract.txt", header=TRUE)
+# r_subcol_aspect_extract <-read.csv("V:/Project/Terrestrial/adpe/aschmidt/royds_GIS_layers/royds_aspect_corrected_extract.csv", header=TRUE)
 # 
-# subcol_aspect_extract$cos <- cos(subcol_aspect_extract$VALUE*pi/180)
-# subcol_aspect_extract$sin <- sin(subcol_aspect_extract$VALUE*pi/180)
-
-
-r_subcol_aspect_summ <- r_subcol_aspect_extract%>%
-  # use circular to create a circular object to calculated mean aspect
-  mutate(circ=circular(Value, type="angles", units="degrees",modulo="2pi", template='geographics'))%>%
-  group_by(SrcID_Feat)%>%
-  summarize(mean_aspect=mean(circ))
-
-hist(as.numeric(r_subcol_aspect_summ$mean_aspect[r_subcol_aspect_summ$mean_aspect>=0]))
-range(as.numeric(r_subcol_aspect_summ$mean_aspect))
-
-write.csv(r_subcol_aspect_summ, "data/royds_selected_aspect_corrected.csv", row.names=FALSE)
+# 
+# # 
+# # subcol_aspect_extract$cos <- cos(subcol_aspect_extract$VALUE*pi/180)
+# # subcol_aspect_extract$sin <- sin(subcol_aspect_extract$VALUE*pi/180)
+# 
+# 
+# r_subcol_aspect_summ <- r_subcol_aspect_extract%>%
+#   # use circular to create a circular object to calculated mean aspect
+#   mutate(circ=circular(Value, type="angles", units="degrees",modulo="2pi", template='geographics'))%>%
+#   group_by(SrcID_Feat)%>%
+#   summarize(mean_aspect=mean(circ))
+# 
+# hist(as.numeric(r_subcol_aspect_summ$mean_aspect[r_subcol_aspect_summ$mean_aspect>=0]))
+# range(as.numeric(r_subcol_aspect_summ$mean_aspect))
+# 
+# write.csv(r_subcol_aspect_summ, "data/royds_selected_aspect_corrected.csv", row.names=FALSE)
 
 
 
