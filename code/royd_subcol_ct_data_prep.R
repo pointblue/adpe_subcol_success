@@ -127,7 +127,7 @@ r_elev_14_format <- r_elev_14_raw%>%
 # r_windshelt_14_format <- read.csv("data/royds_mean_windshelter100m.csv",header=TRUE)%>%
   # select(subcol=SUBCOL, mean_windshelt100m=MEAN)
 
-r_windshelt_14_300mformat <- read.csv("data/royds_mean_windshelt_rev2_v2.txt",header=TRUE)%>%
+r_windshelt_14_300mformat <- read.csv("data/royds_mean_windshelt_rev2.txt",header=TRUE)%>%
   dplyr::select(subcol=SUBCOL, mean_windshelt300m=MEAN)
  
 # load slope stats
@@ -174,5 +174,5 @@ anti_join(r_ct_all4,r_all_meas_ct)
 
 # 
 # write data to file
-write.csv(r_all_meas_ct, "data/royds_selected_meas_ct_all_v11.csv", row.names = FALSE)
+write.csv(r_all_meas_ct, "data/royds_selected_meas_ct_all_v10.csv", row.names = FALSE)
 

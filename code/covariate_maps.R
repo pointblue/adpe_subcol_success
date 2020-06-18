@@ -288,10 +288,10 @@ r_elev_df <- as.data.frame(as(r_elev_t, "SpatialPixelsDataFrame"))%>%
   mutate(value=ifelse(value<0,0,value))
 
 # flow accumulation
-flow <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_flowacc_snow_v2.tif")
-flow_t <- crop(projectRaster(flow, crs=proj),ext)
-flow_df <- as.data.frame(as(flow_t, "SpatialPixelsDataFrame"))%>%
-  rename(value=croz_flowacc_snow_v2)%>%
+r_flow <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/rev2/royds_flow_acc_snow_rev2.tif")
+r_flow_t <- crop(projectRaster(r_flow, crs=proj),r_ext)
+r_flow_df <- as.data.frame(as(r_flow_t, "SpatialPixelsDataFrame"))%>%
+  rename(value=royds_flow_acc_snow_rev2)%>%
   mutate(value=ifelse(value<0,NA,value),value=log1p(value))
 
 # Windshelter
@@ -302,12 +302,12 @@ wind_df <- as.data.frame(as(wind_t, "SpatialPixelsDataFrame"))%>%
   mutate(value=ifelse(value<0,NA,value))
 
 # Skua
-skua <-raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/skua50m_dist_rast_bin.tif")
-skua_ext <- ext
-skua_t <- crop(projectRaster(skua, crs=proj),skua_ext)
-skua_df <- as.data.frame(as(skua_t, "SpatialPixelsDataFrame"))%>%
-  rename(value= skua50m_dist_rast_bin)%>%
-  mutate(value=ifelse(is.na(value),0,value))
+r_skua <-raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/rev2/royds_skua_50m_rast.tif")
+r_skua_ext <- extent(r_skua)
+r_skua_t <- crop(projectRaster(r_skua, crs=proj),r_skua_ext)
+r_skua_df <- as.data.frame(as(r_skua_t, "SpatialPixelsDataFrame"))%>%
+  rename(value= royds_skua_50m_rast)%>%
+  mutate(value=ifelse(value>50,NA,1))
 
 
 
@@ -374,11 +374,11 @@ p.r_elev<- ggplot() +
 plot(p.r_elev)
 
 
-p.flow<- ggplot() +  
-  geom_raster(data=flow_df, aes(x=x, y=y, fill=value))+
-  geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
+p.r_flow<- ggplot() +  
+  geom_raster(data=r_flow_df, aes(x=x, y=y, fill=value))+
+  geom_polygon(data=royds_bound_t, aes(x=long, y=lat, group=group),
                fill=NA, col="white",size=1) +
-  scale_fill_gradientn(colors=col.p,limits =c(0,12), "Flow (log)") +
+  scale_fill_gradientn(colors=col.p,limits =c(0,7), "Flow (log)") +
   theme(legend.position="right") +
   # theme(legend.key.width=unit(1, "cm"))+
   theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
@@ -390,9 +390,9 @@ p.flow<- ggplot() +
         legend.title = element_text(colour="white"),
         axis.text=element_blank(),
         axis.ticks = element_blank())
-# plot(p.flow)
+plot(p.r_flow)
 
-p.wind<- ggplot() +  
+p.r_wind<- ggplot() +  
   geom_raster(data=wind_df, aes(x=x, y=y, fill=value))+
   geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
                fill=NA, col="white",size=1) +
@@ -411,10 +411,10 @@ p.wind<- ggplot() +
 # plot(p.wind)
 
 
-p.skua<- ggplot() +  
-  geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
+p.r_skua<- ggplot() +  
+  geom_polygon(data=royds_bound_t, aes(x=long, y=lat, group=group),
                fill=NA, col="white",size=1)+
-  geom_tile(data=skua_df, aes(x=x, y=y, fill=value))+
+  geom_tile(data=r_skua_df, aes(x=x, y=y, fill=value))+
   # scale_fill_manual(col.p[1]) +
   theme(legend.position="right") +
   # theme(legend.key.width=unit(1, "cm"))
@@ -427,7 +427,7 @@ p.skua<- ggplot() +
         legend.title = element_text(colour="white"),
         axis.text=element_blank(),
         axis.ticks = element_blank())
-plot(p.skua)
+plot(p.r_skua)
 
 # Predicted subcol quality
 # satellite image

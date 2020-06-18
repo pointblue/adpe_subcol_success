@@ -1,7 +1,7 @@
 ---
 title: "Analysis of variation in reproductive success by subcolony"
 author: "Annie Schmidt"
-date: "Last edit 24-03-2020" 
+date: "Last edit 18-06-2020" 
 output:
   pdf_document: default
   html_document: default
@@ -19,10 +19,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r load libraries and data}
 
 list.of.packages <- c("tidyverse", "mgcv","Hmisc", "stringr","gridExtra","nlme", "raster","sf","nngeo","bbmle")
-# compare to existing packages
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-# install missing packages
-if(length(new.packages)>0) {install.packages(new.packages)}
+# # compare to existing packages
+# new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+# # install missing packages
+# if(length(new.packages)>0) {install.packages(new.packages)}
 # load required packages
 lapply(list.of.packages, library, character.only = TRUE)
 
@@ -32,10 +32,12 @@ setwd("Z:/Informatics/S031/analyses/aschmidt/subcol_var")
 
 # read in count data files with subcolony attributes (created by croz(royd)_subcol_ct_data_prep.R) ####
 # Crozier
-c_ct_meas <- read_csv("data/croz_selected_meas_ct_all_v16.csv")
+# v17 has windshelter calculated from windshelter_300m_pi_pi8_lcc169
+c_ct_meas <- read_csv("data/croz_selected_meas_ct_all_v17.csv")
 
-# Royds
-r_ct_meas <- read_csv("data/royds_selected_meas_ct_all_v11.csv")
+
+# Royds v10 has windshelter calculated from the South (not SE)
+r_ct_meas <- read_csv("data/royds_selected_meas_ct_all_v8.csv")
 
 
 ```
@@ -49,7 +51,7 @@ Format data for modeling
 
 c_dat <- c_ct_meas%>%
   dplyr::select(-FID,-mean_elev, perim)%>%
-  mutate(season=factor(season),subcol=factor(subcol), m=ifelse(area_name=="m","y","n"), skua50_yn=factor(ifelse(skua50==1,"y","n")),skua50=factor(skua50), mean_acr=ifelse(mean_acr>2.02,NA,mean_acr),mean_acr_log=log(mean_acr))%>%
+  mutate(season=factor(season),subcol=factor(subcol), m=ifelse(area_name=="m","y","n"), skua50_yn=factor(ifelse(skua50==1,"y","n")),skua50=factor(skua50))%>%
 # select only years 1415-1718  # remove s3 because it's an outlier
   filter(season%in%c("1415","1516","1617","1718"),!subcol=="s3",!prod=="NA"&!is.na(pa_ratio))%>%
   dplyr::rename(mean_windshelt=mean_windshelt300m, perimeter=perim)
@@ -519,13 +521,19 @@ ann_prod_anom<-all_dat%>%
   dplyr::summarise(mean_prod=mean(prod, na.rm=TRUE),se=sd(prod, na.rm=TRUE)/sqrt(n()))%>%
   full_join(all_dat)%>%
   mutate(prod_anom = prod-mean_prod)%>%
-  mutate_at(vars(area,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_windshelt,flow_acc,flow_acc_log,flow_acc_log1p,mean_acr,mean_acr_log),funs(scale))
+  mutate_at(vars(area,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_windshelt,flow_acc,flow_acc_log,flow_acc_log1p),funs(scale))
 # plot(ann_prod_anom$subcol,ann_prod_anom$prod_anom)
 
 # Set k=6
 ck=6
 # Fit model with no interactions
-c_base_anom <-gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
+ # +s(mean_aspect,k=ck, bs="cc") ,+s(mean_windshelt,k=ck),s(area, k=ck), +s(flow_acc_log1p, k=ck)
+c_base_anom <-gam(prod_anom~s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
+
+# c_base_anom <-gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
+# 
+# c_base_anom <-gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc")+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
+
 
 summary(c_base_anom)
 anova(c_base_anom)
@@ -536,33 +544,49 @@ par(mfrow=c(2,2))
 gam.check(c_base_anom)
 concurvity(c_base_anom, full=FALSE)
 
+c_base_comp <- gam(prod_anom~ s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc")+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
+summary(c_base_comp)
+plot.gam(c_base_comp,pages=1)
+
 # Fit model with seasonal interaction
-c_seasonx_anom <-gam(prod_anom~s(area, by=season, k=ck) + s(pa_ratio, by=season, k=ck)+s(adjust_mean_elev,by=season, k=ck)+s(mean_slope, by=season, k=ck) +s(mean_aspect,by=season,k=ck, bs="cc") +s(mean_windshelt,by=season,k=ck)+s(flow_acc_log1p,by=season, k=ck)+skua50*season+s(subcol, bs="re"), data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
+c_seasonx_anom <-gam(prod_anom~s(area, by=season, k=ck) + s(pa_ratio, by=season, k=ck)+s(adjust_mean_elev,by=season, k=ck)+s(mean_slope, by=season, k=ck) +s(mean_aspect,by=season,k=ck, bs="cc") +s(mean_windshelt,by=season,k=ck)+s(flow_acc_log1p,by=season, k=ck)+skua50*season, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
+# 
+# c_seasonx_anom <-gam(prod_anom~ s(pa_ratio, by=season, k=ck)+s(adjust_mean_elev,by=season, k=ck)+s(mean_slope, by=season, k=ck) +s(mean_aspect,by=season,k=ck, bs="cc") +s(mean_windshelt,by=season,k=ck)+s(flow_acc_log1p,by=season, k=ck)+skua50*season, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
+# c_seasonx_anom <-gam(prod_anom~s(area, by=season, k=ck) + s(pa_ratio, by=season, k=ck)+s(adjust_mean_elev,by=season, k=ck)+s(mean_slope, by=season, k=ck) +s(mean_windshelt,by=season,k=ck)+s(flow_acc_log1p,by=season, k=ck)+skua50*season, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
+# plot(c_seasonx_anom, pages=4)
+
 summary(c_seasonx_anom)
+
 plot.gam(c_seasonx_anom,pages=1, shade=TRUE)
 
 
 # check how compare
 library(bbmle)
-c_mod_tab<-AICctab(c_base_anom,c_seasonx_anom,nobs=292, base=TRUE, weights=TRUE, logLik=TRUE)
+AICctab(c_base_anom,c_seasonx_anom,nobs=292, base=TRUE, weights=TRUE, logLik=TRUE)
 
 
 ```
 
-Gamms for Royds
-```{r Royds Gamms, include=FALSE}
+Gams for Royds
+```{r Royds Gams, include=FALSE}
 
 # set k for royds
 rk=4
 # Fit model with no interactions
-r_base_anom <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_windshelt,k=rk)+s(mean_aspect,k=rk, bs="cc") +s(flow_acc_log1p, k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
+r_base_anom <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_windshelt,k=rk)+s(mean_aspect,k=rk, bs="cc") +s(flow_acc_log1p, k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"), method="ML", select="TRUE")
+gam.check(r_base_anom) # looks pretty good, some skew in the residuals
+concurvity(r_base_anom, full=FALSE) # nothing above 0.6
+plot.gam(r_base_anom, pages=1)
+summary(r_base_anom)
+
+# model above is behaving oddly with respect to windshelter and pa-ratio
+# windshelter and 
 
 r_base_anom_1 <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_windshelt,k=rk) +s(flow_acc_log1p, k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
 summary(r_base_anom_1)
 plot.gam(r_base_anom, pages=1)
 plot.gam(r_base_anom, pages=1, shade=T, residuals=T)
 
-gam.check(r_base_anom) # looks pretty good, some skew in the residuals
 
 r_base_anom_2 <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc") +s(flow_acc_log1p, k=rk)+skua50, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
 
@@ -576,11 +600,11 @@ summary(r_seasonx_anom)
 plot(r_seasonx_anom, pages=2, shade=TRUE)
 
 r_seasonx_anom_2 <-  gam(prod_anom~s(area,k=rk) + s(pa_ratio,k=rk)+ s(adjust_mean_elev,by=season, k=rk)+s(mean_slope,by=season,k=rk) +s(mean_aspect, by=season,bs="cc", k=rk) + s(flow_acc_log1p,by=season,k=3)+ skua50*season, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
-summary(r_seasonx_anom)
+summary(r_seasonx_anom_2)
 
 
 library(bbmle)
-r_mod_tab<-AICctab(r_base_anom,r_base_anom_1,r_base_anom_2,r_seasonx_anom_1,r_seasonx_anom_2,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
+AICctab(r_base_anom,r_base_anom_1,r_base_anom_2,r_seasonx_anom_1,r_seasonx_anom_2,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
 
 
 ```

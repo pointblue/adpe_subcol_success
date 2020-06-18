@@ -295,7 +295,7 @@ all_ct <- full_join(m_all_ct,oth_ct_format)%>%
 
  # V2 has snow cells weighted by 1 and non-snow cell weighted by 0
 # V4 has snow cells weighted by 3 and non-snow cell weighted by 1
-flow_acc <- read_csv("data/croz_selected_mean_flow_acc_snow_v2.csv")%>%
+flow_acc <- read_csv("data/croz_selected_mean_flow_acc_snow_v4.csv")%>% #v4 included in final v17
    dplyr::select(subcol=SUBCOL, flow_acc=MEAN)%>%
    mutate(flow_acc_log1p=log1p(flow_acc))
  
@@ -311,15 +311,11 @@ elev_14_format <- elev_14_raw%>%
   dplyr::select(subcol,mean_elev=MEAN)%>%
   mutate(adjust_mean_elev=mean_elev+47)
 
-# # load shade stats
-# wind_14_raw <- read_csv("data/croz_selected_mean_wind.txt")
-# # reformat
-# wind_14_format<- wind_14_raw%>%
-#   dplyr::select(subcol,mean_wind=MEAN)
 
 # load windshelter
-windshelt_14_format <-read_csv("data/croz_selected_mean_windshelt_300m_2pi_v2.1.txt")%>%
-  dplyr::select(subcol,mean_windshelt300m=MEAN)
+# windshelt_14_format <-read_csv("data/croz_selected_mean_windshelt_300m_2pi_v2.1.txt")%>% included in v16
+windshelt_14_format <-read_csv("data/croz_selected_wind_300m_pi_pi8_lcc169.txt")%>% # included in v17
+  dplyr::select(subcol=croz_selec,mean_windshelt300m=MEAN)
 
 # windshelt_14_format2 <-read_csv("data/croz_selected_mean_windshelt_100mpi4pi12.txt")%>%
 #   dplyr::select(subcol=SUBCOL,mean_windshelt100m=MEAN)
@@ -333,11 +329,6 @@ slope_14_raw <- read_csv("data/croz_selected_mean_slope.txt")
 slope_14_format <- slope_14_raw%>%
   dplyr::select(subcol,mean_slope=MEAN)
 
-# load insolation stats
-#solar_14_raw <- read.csv("data/croz_selected_solar.txt")
-#solar_14_format <- solar_14_raw%>%
- # select(SUBCOL, MEAN)%>%
-  #rename(subcol=SUBCOL, mean_solar=MEAN)
 
 # Load skua data
 skua50_raw <- read_csv("data/croz_selected_near_skua50.txt")
@@ -346,32 +337,9 @@ skua50_format <- skua50_raw%>%
   dplyr::select(FID=IN_FID, skua50=NEAR_DIST)%>%
   mutate(skua50=1)
 
-# # Load dist to boundary data
-# dist_bound <- read_csv("data/croz_selected_near_outerbound.txt")%>%
-#   dplyr::select(FID=IN_FID, dist_outer=NEAR_DIST)
-# 
-# # Load dist to nest 10 subcol data 
-# near_subcol <- read_csv("data/croz_selected_near_subcol.txt")
-# near_subcol_mean <- near_subcol%>%
-#   dplyr::select(FID=IN_FID,dist=NEAR_DIST,rank=NEAR_RANK)%>%
-#   group_by(FID)%>%
-#   dplyr::slice(-1)%>%
-#   summarise(mean_n10_dist = mean(dist))
-# hist(near_subcol_mean$mean_n10_dist)
-
- # Terrain roughness index (TRI)
-# TRI_format <- read_csv("data/croz_mean_TRI.csv")%>%
-#   dplyr::select(subcol=SUBCOL, mean_TRI=MEAN)
-# Very correlated with slope so not using
-
-# arc_shord rugosity (ACR)
-acr_format <- read_csv("data/croz_mean_ACR.csv")%>%
-  dplyr::select(subcol=SUBCOL, mean_acr=MEAN)%>%
-  mutate(mean_acr_log=log(mean_acr))
-hist(acr_format$mean_acr)
 
 # # combine all 2014 measurement data
-list_14 <- list(geom_flood_14_format, aspect_14_format,slope_14_format,elev_14_format, windshelt_14_format,skua50_format, flow_acc,acr_format)
+list_14 <- list(geom_flood_14_format, aspect_14_format,slope_14_format,elev_14_format, windshelt_14_format,skua50_format, flow_acc)
 all_meas_14 <- as.data.frame(list_14[1])
 for(i in 1:(length(list_14)-1)){
   a = data.frame(list_14[i+1])
@@ -393,7 +361,7 @@ anti_join(all_ct,all_meas_ct)
 # Subcolonies with full count data (ad and chick counts from at least one year 1415-1718) that appear to be missing measurement data:
 # c40 (only counted 1617), fbeach_2 (doesn't appear on aerial photo), g46 (counted all 4 years), l19 (only counted 1718), m19, m20 (lots of msubcol that don't have counts from last 4 years), 
 # qr157 (doen't look like same area was counted in 1415 and 1516, no counts from 1617 or 1718)
-# The only one that would be nice to include is g46 but not worth redoing all spatial stats for that so leaving out for now
+# The only one that would be nice to include is g46 but not worth redoing all spatial stats for that so leaving out for now (not showing up now (6/17/20))
 # 
  
 
@@ -407,29 +375,29 @@ miss <- all_meas_ct%>%
 
 # Not sure how to do this other than one at a time
 miss[1,] # d11
-all_meas_ct[all_meas_ct$subcol=="d11",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="d9-11",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")][1,]  
+all_meas_ct[all_meas_ct$subcol=="d11",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="d9-11",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")][1,]  
 miss[2,] #d24: replace with values from d24_1 (split from d24 but should be the same)
-all_meas_ct[all_meas_ct$subcol=="d24",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="d24_1",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")][1,]  
+all_meas_ct[all_meas_ct$subcol=="d24",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="d24_1",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")][1,]  
 miss[3,] #d47-48: replace with values from d47
-all_meas_ct[all_meas_ct$subcol=="d47-48",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="d47",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")][1,]  
+all_meas_ct[all_meas_ct$subcol=="d47-48",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="d47",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")][1,]  
 miss[4,] #d9: replace with values from d9-11
-all_meas_ct[all_meas_ct$subcol=="d9",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="d9-11",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")][1,]  
+all_meas_ct[all_meas_ct$subcol=="d9",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="d9-11",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")][1,]  
 miss[5,] #m21-24, replace with m21
-all_meas_ct[all_meas_ct$subcol=="m21-24",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="m21",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")][1,]  
+all_meas_ct[all_meas_ct$subcol=="m21-24",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="m21",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")][1,]  
 miss[6,] #p22-23, replace with p22
-all_meas_ct[all_meas_ct$subcol=="p22-23",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="p22",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")][1,]  
+all_meas_ct[all_meas_ct$subcol=="p22-23",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="p22",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")][1,]  
 miss[7,] #p44_1, replace with p44
-all_meas_ct[all_meas_ct$subcol=="p44_1",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="p44",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")][1,]  
+all_meas_ct[all_meas_ct$subcol=="p44_1",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="p44",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")][1,]  
 miss[8,] #p44_2, replace with p44
-all_meas_ct[all_meas_ct$subcol=="p44_2",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")]<-
-  all_meas_14_format[all_meas_14_format$subcol=="p44",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p","mean_acr")][1,]  
+all_meas_ct[all_meas_ct$subcol=="p44_2",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")]<-
+  all_meas_14_format[all_meas_14_format$subcol=="p44",c("mean_aspect","mean_slope","mean_elev","adjust_mean_elev","mean_windshelt300m","flow_acc", "flow_acc_log1p")][1,]  
 
 
 # fill in NA in skua and flood_risk variables with 0
@@ -437,10 +405,5 @@ all_meas_ct[is.na(all_meas_ct$skua50), "skua50"]<- 0
 all_meas_ct[is.na(all_meas_ct$flood_risk), "flood_risk"]<- 0
 
 # # write data to file
-write.csv(all_meas_ct, "data/croz_selected_meas_ct_all_v16.csv", row.names = FALSE)
+write.csv(all_meas_ct, "data/croz_selected_meas_ct_all_v17.csv", row.names = FALSE)
 
-# # create table with mean prod anomaly by subcolony
-# subcol_anom <- aggregate(ann_prod_anom~subcol,data=all_ct_anom, FUN=mean)
-# 
-# # write table
-# write.csv(subcol_anom, "data/croz_avg_subcol_prod_anom.csv", row.names = FALSE)
