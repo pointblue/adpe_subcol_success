@@ -399,7 +399,7 @@ ann_prod_anom<-all_dat%>%
 ck=6
 # Fit model with no interactions
 # initial submission had fit model with ML because though I couldn't compare models using REML. But REML supposed to be better and gam (mgcv) help indicates ok to compare using AICc so switching  
-c_base_anom <-gam(prod_anom~s(area, k=ck)+s(pa_ratio, k=ck)+s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck) +s(flow_acc_log1p,k=ck)+s(adjust_mean_elev,k=ck)+ s(mean_slope, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="REML")
+c_base_anom <-gam(prod_anom~s(area, k=ck)+s(pa_ratio, k=ck)+s(mean_slope, k=ck)+s(mean_aspect,k=ck, bs="cc") +s(adjust_mean_elev,k=ck)+s(flow_acc_log1p,k=ck)+ s(mean_windshelt,k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="REML")
 # check if basis dimensions sifficient
 par(mfrow=c(2,2))
 gam.check(c_base_anom) # flow p-value is significatn, but edf not close to k so not adjusting
@@ -517,13 +517,7 @@ mod_tab <- rbind(rmod_tab,cmod_tab)%>%
   cols_move_to_start(columns=c("Model", "description"))%>%
   tab_source_note(source_note = "base model covariates: area + perimeter/area ratio + slope + aspect + elevation +  flow accumulation + wind shelter index +  skua within 50m")
 
-# table with model structure
-models<- data.frame(colony=c("Cape Crozier", "Cape Crozier","Cape Royds","Cape Royds","Cape Royds","Cape Royds"),model_name=c("m1","m2","m1","m2","m3","m4"), covariates=c("area + perimeter/area ratio + slope + aspect + elevation + flow accumulation + wind shelter index + skua within 50m","area + perimeter/area ratio + slope + aspect + elevation + flow accumulation + wind shelter index + skua within 50m + year interaction","area + perimeter/area ratio + slope + elevation + flow accumulation + wind shelter index + skua within 50m","area + perimeter/area ratio + slope + aspect + elevation + flow accumulation + skua within 50m","area + perimeter/area ratio + slope + elevation + flow accumulation + wind shelter index + skua within 50m + year interaction","area + perimeter/area ratio + slope + aspect + elevation + flow accumulation + skua within 50m + year interaction"))
- 
-models%>%
-  gt(rowname_col="model_name",groupname_col = "colony")%>%
-  cols_align("left")%>%
-  tab_header(title="",subtitle = "Covariates: area + perimeter/area ratio + slope + aspect + elevation + flow accumulation + wind shelter index + skua within 50m")
+
 
 ```
 Proportion Deviance explained
@@ -540,59 +534,63 @@ Proportion Deviance explained
 # > (deviance(b2)-deviance(b))/deviance(b0) ## prop explained by s(x1)
 
 cb<-c_base_anom # Rename base model
+c_base_anom <-gam(prod_anom~s(area, k=ck)+s(pa_ratio, k=ck)+s(mean_slope, k=ck)+s(mean_aspect,k=ck, bs="cc") +s(adjust_mean_elev,k=ck)+s(flow_acc_log1p,k=ck)+ s(mean_windshelt,k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="REML")
 # Fit intercept only model
-cb0 <- gam(prod_anom~1, data=filter(ann_prod_anom,col=="croz"), method="ML")
+cb0 <- gam(prod_anom~1, data=filter(ann_prod_anom,col=="croz"), method="REML")
 summary(cb0)
 # Fit model with pa ratio removed and smooths for all other variables supplied from base model
 # Area and wind already dropped
 
 #### Something wrong with these calculations
+# order of variables must match base model
 
 # Drop pa ratio
-cb1 <-gam(prod_anom~s(area, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE,method="ML") # sp=c_base_anom$sp[-c(3,4)])
+cb1 <-gam(prod_anom~s(area, k=ck)+s(mean_slope, k=ck)+s(mean_aspect,k=ck, bs="cc") +s(adjust_mean_elev,k=ck)+s(flow_acc_log1p,k=ck)+ s(mean_windshelt,k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"),select=TRUE, method="REML",sp=cb$sp[-c(3,4)]) 
+
 plot.gam(cb1,pages=1)
 
-# Fit model with elevation removed
-cb2 <-gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE,method="ML", sp=c_base_anom$sp[-c(5,6)])
 # slope removed
-cb3<- gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE,method="ML",sp=c_base_anom$sp[-c(7,8)])
+cb2<- gam(prod_anom~s(area, k=ck)+s(pa_ratio, k=ck)+s(mean_aspect,k=ck, bs="cc") +s(adjust_mean_elev,k=ck)+s(flow_acc_log1p,k=ck)+ s(mean_windshelt,k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="REML",sp=cb$sp[-c(5,6)])
+
+# aspect removed
+cb3<- gam(prod_anom~s(area, k=ck)+s(pa_ratio, k=ck)+s(mean_slope, k=ck) +s(adjust_mean_elev,k=ck)+s(flow_acc_log1p,k=ck)+ s(mean_windshelt,k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="REML",sp=cb$sp[-7])
+
+# Fit model with elevation removed
+cb4 <-gam(prod_anom~s(area, k=ck)+s(pa_ratio, k=ck)+s(mean_slope, k=ck)+s(mean_aspect,k=ck, bs="cc")+s(flow_acc_log1p,k=ck)+ s(mean_windshelt,k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="REML",sp=cb$sp[-c(8,9)])
+
 # Windshelter removed
-# cb4 <- gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc")+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE,method="ML", sp=c_base_anom$sp[-c(10,11)])
+# cb4 <- gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc")+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE,method="REML", sp=c_base_anom$sp[-c(6,7)])
 # flow accumulation removed
-cb5 <- gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"),select=TRUE, method="ML", sp=c_base_anom$sp[-c(12,13)] )
+cb5 <-gam(prod_anom~s(area, k=ck)+s(pa_ratio, k=ck)+s(mean_slope, k=ck)+s(mean_aspect,k=ck, bs="cc") +s(adjust_mean_elev,k=ck)+ s(mean_windshelt,k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="REML", sp=cb$sp[-c(10,11)])
 #Skua removed
-cb6 <- gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck), data=filter(ann_prod_anom,col=="croz"),select=TRUE, method="ML",sp=c_base_anom$sp[-14])
+cb6<-gam(prod_anom~s(area, k=ck)+s(pa_ratio, k=ck)+s(mean_slope, k=ck)+s(mean_aspect,k=ck, bs="cc") +s(adjust_mean_elev,k=ck)+s(flow_acc_log1p,k=ck)+ s(mean_windshelt,k=ck), data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="REML", sp=cb$sp)
 # # subcol ID removed
 # cb7 <- gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_aspect,k=ck, bs="cc") +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="REML",sp=c_base_anom_REML$sp[-15])
-# aspect removed
-cb7<- gam(prod_anom~s(area, k=ck) + s(pa_ratio, k=ck)+s(adjust_mean_elev, k=ck)+ s(mean_slope, k=ck) +s(mean_windshelt,k=ck)+s(flow_acc_log1p, k=ck), data=filter(ann_prod_anom,col=="croz"),select=TRUE, method="ML",sp=c_base_anom$sp[-5])
 
-summary(cb)$dev.expl-summary(cb1)$dev.expl
 
-cst=cb0
-cov = cb1
-t=cb
+summary(cb)$dev.expl-summary(cb6)$dev.expl
 
 c_pa_devex <- 1-(deviance(cb0)-deviance(cb1))/(deviance(cb0)-deviance(cb))
-c_elev_devex <- 1-(deviance(cb0)-deviance(cb2))/(deviance(cb0)-deviance(cb))
-c_slope_devex <-1-(deviance(cb0)-deviance(cb3))/(deviance(cb0)-deviance(cb))
-# c_wind_devex <-1-(deviance(cb0)-deviance(cb4))/(deviance(cb0)-deviance(cb))
-c_flood_devex<-1-(deviance(cb0)-deviance(cb5))/(deviance(cb0)-deviance(cb))
-c_skua_devex<-1-(deviance(cb0)-deviance(cb6))/(deviance(cb0)-deviance(cb))
-c_aspect_devex <- 1-((deviance(cb7)-deviance(cb))/deviance(cb0))
+# c_elev_devex <- 1-(deviance(cb0)-deviance(cb2))/(deviance(cb0)-deviance(cb))
+# c_slope_devex <-1-(deviance(cb0)-deviance(cb3))/(deviance(cb0)-deviance(cb))
+# # c_wind_devex <-1-(deviance(cb0)-deviance(cb4))/(deviance(cb0)-deviance(cb))
+# c_flood_devex<-1-(deviance(cb0)-deviance(cb5))/(deviance(cb0)-deviance(cb))
+# c_skua_devex<-1-(deviance(cb0)-deviance(cb6))/(deviance(cb0)-deviance(cb))
+# c_aspect_devex <- 1-((deviance(cb7)-deviance(cb))/deviance(cb0))
 
 # Croz Proportion (deviance(rb1)-deviance(rb))/deviance(rb0)
 
-c_pa_ndevex <- ((deviance(cb1)-deviance(cb))/deviance(cb0))
-c_elev_ndevex <- ((deviance(cb2)-deviance(cb))/deviance(cb0))
-c_slope_ndevex <- ((deviance(cb3)-deviance(cb))/deviance(cb0))
+c_pa_ndevex <- ((deviance(cb1)-deviance(cb))/deviance(cb0)) # same as summary(cb)$dev.expl-summary(cb1)$dev.expl
+c_slope_ndevex <- ((deviance(cb2)-deviance(cb))/deviance(cb0))
+c_aspect_ndevex <- ((deviance(cb3)-deviance(cb))/deviance(cb0))
+c_elev_ndevex <- ((deviance(cb4)-deviance(cb))/deviance(cb0))
 # c_wind_devex <- (deviance(cb4)-deviance(cb))/deviance(cb0)
 c_flood_ndevex<- ((deviance(cb5)-deviance(cb))/deviance(cb0))
 c_skua_ndevex<- ((deviance(cb6)-deviance(cb))/deviance(cb0))
-c_aspect_ndevex <- ((deviance(cb7)-deviance(cb))/deviance(cb0))
 
 
 
+summary(cb)$dev.expl-summary(cb6)$dev.expl
 
 # Royds
 rb <- r_base_anom_aspect
