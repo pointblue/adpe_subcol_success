@@ -66,7 +66,8 @@ m_ad_1617_format<- m_ad_1617_raw%>%
   # remove empty row
   filter(!active_ct==(is.na(active_ct)))%>%
   # remove extra subcol column
-  dplyr::select(-subcolony)
+  dplyr::select(-subcolony)%>%
+  as.data.frame()
 
 # m21 and m24 counted together for chick count so adding nest count together
 m_ad_1617_format[m_ad_1617_format$subcol=="m21",c("active_ct","occ_ct","tot_ct")] <- colSums(m_ad_1617_format[m_ad_1617_format$subcol%in%c("m21","m24"),c("active_ct","occ_ct","tot_ct")])
@@ -150,7 +151,8 @@ m_ad_1718_format<- m_ad_1718_raw%>%
   # remove empty row
   filter(!active_ct==(is.na(active_ct)))%>%
   # remove extra subcol column
-  dplyr::select(-subcolony)
+  dplyr::select(-subcolony)%>%
+  as.data.frame()
 
 # m21 and m24 counted together for chick count so adding nest count together
 m_ad_1718_format[m_ad_1718_format$subcol=="m21",c("active_ct","occ_ct","tot_ct")] <- colSums(m_ad_1718_format[m_ad_1718_format$subcol%in%c("m21","m24"),c("active_ct","occ_ct","tot_ct")])
@@ -279,19 +281,6 @@ all_ct <- full_join(m_all_ct,oth_ct_format)%>%
  geom_flood_14_format<- geom_flood_14_raw%>%
    dplyr::select(FID,subcol, area, perim, pa_ratio,flood_risk=SUM_AREA)
  
- # # flow acc
- # flow_acc <- read_csv("data/croz_selected_mean_flow_acc.txt")%>%
- #   dplyr::select(subcol=SUBCOL, flow_acc=MEAN)%>%
- #   mutate(flow_acc_log1p=log1p(flow_acc))
- # hist(flow_acc$flow_acc_log1p)
- # hist(flow_acc$flow_acc)
- 
-# Flow accumulation weighted by snow raster
- # flow_acc_snow <- read_csv("data/croz_selected_mean_flow_acc_snow_v2.csv")%>%
- #   dplyr::select(subcol=SUBCOL, flow_acc_snow=MEAN)%>%
- #   mutate(flow_acc_snow_log1p=log1p(flow_acc_snow))
- # hist(flow_acc_snow_v3$flow_acc_snow3_log1p)
- # hist(flow_acc_snow_v3$flow_acc_snow3)
 
  # V2 has snow cells weighted by 1 and non-snow cell weighted by 0
 # V4 has snow cells weighted by 3 and non-snow cell weighted by 1
@@ -300,9 +289,14 @@ flow_acc <- read_csv("data/croz_selected_mean_flow_acc_snow_v4.csv")%>% #v4 incl
    mutate(flow_acc_log1p=log1p(flow_acc))
  
 # load aspect stats
-aspect_14_raw <- read_csv("data/croz_selected_mean_aspect_corr.txt")
+# aspect_14_raw <- read_csv("data/croz_selected_mean_aspect_corr.txt")
+# aspect_corrected_adjust had 360 added to any aspect values>280 (there are no aspect values between ~180 and 350) 
+# so that could average the aspect values for the subcols that span 0 correctly
+# now can subtract 360 from the averages and should be correct
+aspect_14_raw <- read_csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/rev2/croz_selected_aspect_corrected_adjust.txt")
 aspect_14_format <- aspect_14_raw%>%
-  dplyr::select(subcol, mean_aspect=MEAN)
+  dplyr::select(subcol=SUBCOL, mean_aspect=MEAN)%>%
+  mutate(mean_aspect=mean_aspect-360)
 
 # load elevation stats
 elev_14_raw <- read_csv("data/croz_selected_mean_elev.txt")
@@ -405,5 +399,5 @@ all_meas_ct[is.na(all_meas_ct$skua50), "skua50"]<- 0
 all_meas_ct[is.na(all_meas_ct$flood_risk), "flood_risk"]<- 0
 
 # # write data to file
-write.csv(all_meas_ct, "data/croz_selected_meas_ct_all_v17.csv", row.names = FALSE)
+write.csv(all_meas_ct, "data/croz_selected_meas_ct_all_v18.csv", row.names = FALSE)
 
