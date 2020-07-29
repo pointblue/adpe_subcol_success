@@ -284,15 +284,17 @@ all_ct <- full_join(m_all_ct,oth_ct_format)%>%
 
  # V2 has snow cells weighted by 1 and non-snow cell weighted by 0
 # V4 has snow cells weighted by 3 and non-snow cell weighted by 1
-flow_acc <- read_csv("data/croz_selected_mean_flow_acc_snow_v4.csv")%>% #v4 included in final v17
+flow_acc <- read_csv("data/croz_selected_mean_flow_acc_snow_v4.csv")%>% #v4 included in final v18
    dplyr::select(subcol=SUBCOL, flow_acc=MEAN)%>%
    mutate(flow_acc_log1p=log1p(flow_acc))
  
 # load aspect stats
-# aspect_14_raw <- read_csv("data/croz_selected_mean_aspect_corr.txt")
+# aspect_14_raw <- read_csv("data/croz_selected_mean_aspect_corr.txt") #this was included in v17
 # aspect_corrected_adjust had 360 added to any aspect values>280 (there are no aspect values between ~180 and 350) 
 # so that could average the aspect values for the subcols that span 0 correctly
-# now can subtract 360 from the averages and should be correct
+# now can subtract 360 from the averages and should be correct.
+# there are a few values that are now negative, but leaving that way for now because will make it easier for the model to fit. Will need to deal with it at the prediction stage
+# changed here for v18
 aspect_14_raw <- read_csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/rev2/croz_selected_aspect_corrected_adjust.txt")
 aspect_14_format <- aspect_14_raw%>%
   dplyr::select(subcol=SUBCOL, mean_aspect=MEAN)%>%
