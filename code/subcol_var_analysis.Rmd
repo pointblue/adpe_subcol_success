@@ -465,7 +465,7 @@ r_mdat%>%
 # Fit model with no interactions
 r_base_anom <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_windshelt,k=rk)+s(mean_aspect,k=rk, bs="cc")+flow_acc_log1p+skua50, data=r_mdat, method="ML", select="TRUE",na.action="na.pass")
 summary(r_base_anom)
-gam.check(r_base_anom) # looks pretty good, some skew in the residuals
+gam.check(r_base_anom, pages=1) # looks pretty good, some skew in the residuals
 concurvity(r_base_anom) # estimates all >0.8
 round(concurvity(r_base_anom, full=FALSE)$estimate,2) # but nothing in pairwise comparisons above 0.58
 plot.gam(r_base_anom, pages=1)
@@ -484,6 +484,12 @@ concurvity(r_base_aspect) # several estimates >0.8, pa-ratio and slope
 round(concurvity(r_base_aspect, full=FALSE)$estimate,2) # pa ratio highest, highest concurvity with area and elevation. not much variability in elevation so could remove. Highest concurvity is 0.58 so think I could justify that that is OK
 summary(r_base_aspect)
 plot.gam(r_base_aspect, pages=1, shade=T, residuals=T)
+
+r_base2 <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk)+flow_acc_log1p+skua50, data=r_mdat, select=TRUE, method="ML")
+
+r_base3 <-gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk)+skua50, data=r_mdat, select=TRUE, method="ML")
+
+r_base_4<-
 
 # # remove pa-ratio first because highest concurvity
 # rb_aspect_1.1 <- gam(prod_anom~s(area, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc")+flow_acc_log1p+skua50, data=r_mdat, select=TRUE, method="ML")
@@ -560,6 +566,8 @@ gam.check(r_seasonx_anom)
 
 library(bbmle)
 AICctab(r_lm,r_base_anom,r_base_wind,r_base_aspect,rb_aspect_1.1,rb_aspect_1.2, rb_aspect_1.3,rb_aspect_2.1,rb_aspect_2.2,rb_aspect_2.3, rb_aspect_2.4, rb_aspect_3.1, r_seasonx_aspect,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
+
+AICctab(r_base2,r_base3,r_base_wind,r_base_aspect,r_seasonx_aspect,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
 
 ```
 
