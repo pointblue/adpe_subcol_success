@@ -485,89 +485,17 @@ round(concurvity(r_base_aspect, full=FALSE)$estimate,2) # pa ratio highest, high
 summary(r_base_aspect)
 plot.gam(r_base_aspect, pages=1, shade=T, residuals=T)
 
-r_base2 <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk)+flow_acc_log1p+skua50, data=r_mdat, select=TRUE, method="ML")
+# r_base2 <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk)+skua50, data=r_mdat, select=TRUE, method="ML")
+# 
+# r_base3 <-gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk)+flow_acc_log1p, data=r_mdat, select=TRUE, method="ML")
+# 
+# r_base4 <-gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk), data=r_mdat, select=TRUE, method="ML")
 
-r_base3 <-gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk)+skua50, data=r_mdat, select=TRUE, method="ML")
-
-r_base_4<-
-
-# # remove pa-ratio first because highest concurvity
-# rb_aspect_1.1 <- gam(prod_anom~s(area, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc")+flow_acc_log1p+skua50, data=r_mdat, select=TRUE, method="ML")
-# summary(rb_aspect_1.1)
-# concurvity(rb_aspect_1.1) # slope still >0.8
-# round(concurvity(rb_aspect_1.1, full=FALSE)$estimate,2)
-
-# to address pa_ratio concurvity
-# remove area and elevation
-rb_aspect_1.1 <- gam(prod_anom~s(pa_ratio, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc")+flow_acc_log1p+skua50, data=r_mdat, select=TRUE, method="ML")
-summary(rb_aspect_1.1)
-concurvity(rb_aspect_1.1) # slope still >0.8
-round(concurvity(rb_aspect_1.1, full=FALSE)$estimate,2) # slope most highly correlated with pa-ratio
-plot.gam(rb_aspect_1.1, pages=1, shade=T, residuals=T)
-
-# remove slope
-rb_aspect_1.2 <- gam(prod_anom~s(pa_ratio, k=rk)+s(mean_aspect,k=rk, bs="cc")+flow_acc_log1p+skua50, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
-concurvity(rb_aspect_1.2)
-round(concurvity(rb_aspect_1.3, full=FALSE)$estimate,2)
-summary(rb_aspect_1.2)
-plot.gam(rb_aspect_1.2, pages=1, shade=T, residuals=T)
-
-# remove pa-ratio instead of slope
-rb_aspect_1.3 <- gam(prod_anom~s(mean_slope, k=rk)+s(mean_aspect,k=rk, bs="cc")+flow_acc_log1p+skua50, data=r_mdat, select=TRUE, method="ML")
-concurvity(rb_aspect_1.3) # all <0.8
-summary(rb_aspect_1.3)
-plot.gam(rb_aspect_1.3, pages=1, shade=T, residuals=T)
-
-# remove pa-ratio first instead of area and elevation
-rb_aspect_2.1 <- gam(prod_anom~s(area, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc")+flow_acc_log1p+skua50, data=r_mdat, select=TRUE, method="ML")
-summary(rb_aspect_2.1)
-concurvity(rb_aspect_2.1) # slope >0.8
-round(concurvity(rb_aspect_2.1, full=FALSE)$estimate,2) # slope most highly correlated with elevation
-plot.gam(rb_aspect_2.1, pages=1, shade=T, residuals=T)
-
-# remove elevation
-rb_aspect_2.2 <- gam(prod_anom~s(area, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc")+flow_acc_log1p+skua50, data=r_mdat, select=TRUE, method="ML")
-summary(rb_aspect_2.2)
-concurvity(rb_aspect_2.2) # slope >0.8
-round(concurvity(rb_aspect_2.2, full=FALSE)$estimate,2) # slope most highly correlated with area
-plot.gam(rb_aspect_2.1, pages=1, shade=T, residuals=T)
-
-# remove area
-rb_aspect_2.3 <- gam(prod_anom~s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc")+flow_acc_log1p+skua50, data=r_mdat, select=TRUE, method="ML")
-summary(rb_aspect_2.3)
-concurvity(rb_aspect_2.3)
-round(concurvity(rb_aspect_2.3, full=FALSE)$estimate,2)
-plot.gam(rb_aspect_2.3, pages=1, shade=T, residuals=T)
-
-# remove slope first instead of elevation
-rb_aspect_2.4 <- gam(prod_anom~s(area, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_aspect,k=rk, bs="cc")+flow_acc_log1p+skua50, data=r_mdat, select=TRUE, method="ML")
-summary(rb_aspect_2.4)
-concurvity(rb_aspect_2.4) # nothing >0.8
-plot.gam(rb_aspect_2.4, pages=1, shade=T, residuals=T)
-
-
-# remove slope first
-rb_aspect_3.1 <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk) +s(mean_aspect,k=rk, bs="cc")+flow_acc_log1p+skua50, data=r_mdat, select=TRUE, method="ML")
-summary(rb_aspect_3.1)
-concurvity(rb_aspect_3.1) # all <0.8
-round(concurvity(rb_aspect_2.1, full=FALSE)$estimate,2)
-plot.gam(rb_aspect_3.1, pages=1, shade=T, residuals=T)
-
-
-# linear model
-r_lm <-lm(prod_anom~area+pa_ratio+mean_slope+mean_aspect+adjust_mean_elev+flow_acc_log1p+skua50, data=r_mdat)
-summary(r_lm)
-
-r_seasonx_aspect <-  gam(prod_anom~s(area,by=season,k=rk) + s(pa_ratio,by=season,k=rk)+ s(adjust_mean_elev,by=season, k=rk)+s(mean_slope,by=season,k=rk) +s(mean_aspect, by=season,bs="cc", k=rk) + skua50*season, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="ML")
-summary(r_seasonx_anom_aspect)
-
-r_seasonx_anom<-  gam(prod_anom~s(area,by=season,k=rk) + s(pa_ratio, by=season,k=rk)+ s(adjust_mean_elev,by=season, k=rk)+s(mean_slope,by=season,k=rk) +s(mean_aspect,k=rk, bs="cc")+s(mean_windshelt,by=season,k=rk)+ s(flow_acc_log1p,by=season,k=rk)+ skua50*season, data=filter(ann_prod_anom,col=="royds"), select=TRUE, method="REML")
+r_seasonx<-  gam(prod_anom~s(area,by=season,k=rk) + s(pa_ratio, by=season,k=rk)+ s(adjust_mean_elev,by=season, k=rk)+s(mean_slope,by=season,k=rk)+ flow_acc_log1p*season+ skua50*season, data=r_mdat, select=TRUE, method="ML")
 gam.check(r_seasonx_anom)
 
 library(bbmle)
-AICctab(r_lm,r_base_anom,r_base_wind,r_base_aspect,rb_aspect_1.1,rb_aspect_1.2, rb_aspect_1.3,rb_aspect_2.1,rb_aspect_2.2,rb_aspect_2.3, rb_aspect_2.4, rb_aspect_3.1, r_seasonx_aspect,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
-
-AICctab(r_base2,r_base3,r_base_wind,r_base_aspect,r_seasonx_aspect,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
+AICctab(r_base_wind,r_base_aspect,r_seasonx,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
 
 ```
 
