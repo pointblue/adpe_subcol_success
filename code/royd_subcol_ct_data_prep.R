@@ -127,6 +127,11 @@ r_elev_14_format <- r_elev_14_raw%>%
 # r_windshelt_14_format <- read.csv("data/royds_mean_windshelter100m.csv",header=TRUE)%>%
   # select(subcol=SUBCOL, mean_windshelt100m=MEAN)
 
+# Royds wind from SE
+# r_windshelt_14_300mformat <- read.csv("data/royds_mean_windshelt_rev2.txt",header=TRUE)%>%
+#   dplyr::select(subcol=SUBCOL, mean_windshelt300m=MEAN)
+
+# ROyds wind from S
 r_windshelt_14_300mformat <- read.csv("data/royds_mean_windshelt_rev2.txt",header=TRUE)%>%
   dplyr::select(subcol=SUBCOL, mean_windshelt300m=MEAN)
  

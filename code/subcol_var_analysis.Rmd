@@ -206,7 +206,7 @@ wilcox.test(pair_dat$`Skua 50m` [pair_dat$col=="croz"],pair_dat$`Skua 50m`[pair_
 mean(pair_dat$`Aspect (deg)`[pair_dat$col=="croz"])
 mean(pair_dat$`Aspect (deg)`[pair_dat$col=="royds"])
 
-# average perimeter/area ration at each colony
+# average perimeter/area ratio at each colony
 mean(pair_dat$`Perim/Area ratio`[pair_dat$col=="croz"])
 mean(pair_dat$`Perim/Area ratio`[pair_dat$col=="royds"])
 
@@ -294,66 +294,93 @@ r_cv_seas<-r_ct_all%>%
   group_by(season)%>%
   summarise(mean=mean(prod,na.rm=TRUE),sd=sd(prod,na.rm=TRUE))%>%
   mutate(cv=sd/mean)
+# mean within year spatial variation
 mean(r_cv_seas$cv, na.rm=TRUE)
-sd(r_cv_seas$mean,na.rm=TRUE)/mean(r_cv_seas$mean, na.rm=TRUE)
 plot(r_cv_seas$season,r_cv_seas$cv,type="o", ylim=c(0,1))
 
-r_cv_sub<-r_ct_all%>%
-  group_by(subcol)%>%
-  summarise(mean=mean(prod,na.rm=TRUE),sd=sd(prod,na.rm=TRUE))%>%
-  mutate(cv=sd/mean)
-mean(r_cv_sub$cv, na.rm=TRUE)
-mean(r_ct_all$prod)
-mean(r_cv_seas$mean)
+# Cv of each subcolony (did not use)
+# r_cv_sub<-r_ct_all%>%
+#   group_by(subcol)%>%
+#   summarise(mean=mean(prod,na.rm=TRUE),sd=sd(prod,na.rm=TRUE))%>%
+#   mutate(cv=sd/mean)
+# mean(r_cv_sub$cv, na.rm=TRUE)
+# mean(r_ct_all$prod)
+# mean(r_cv_seas$mean)
 
-sd(r_ct_all$prod)/mean(r_ct_all$prod)  
+# overall cv of productivity (including all years and all subcol)
+r_cv_ann<-r_ct_all%>%
+  group_by(season)%>%
+  summarise(ann_prod=mean(prod))
+sd(r_cv_ann$ann_prod)/mean(r_cv_ann$ann_prod)
+
+
+# r_ann_prod <- r_ct_all%>%
+#   group_by(season)%>%
+#   summarise(active_all=sum(active_ct),chx_all=sum(ch_ct),prod_all=chx_all/active_all)
+# # CV
+# sd(r_ann_prod$prod_all)/mean(r_ann_prod$prod_all)
+
 
 # Croz CV
 c_cv_seas<-c_ct_meas%>%
   group_by(season)%>%
   summarise(mean=mean(prod,na.rm=TRUE),sd=sd(prod,na.rm=TRUE))%>%
   mutate(cv=sd/mean)
+# mean within season cv
 mean(c_cv_seas$cv, na.rm=TRUE)
 par(mfrow=c(1,1))
 plot(r_cv_seas$season,r_cv_seas$cv,type="o", ylim=c(0,1))
 lines(c_cv_seas$season,c_cv_seas$cv,type="o", lwd=2)
-sd(c_cv_seas$mean,na.rm=TRUE)/mean(c_cv_seas$mean, na.rm=TRUE)
-sd(c_ct_meas$prod,na.rm=TRUE)/mean(c_ct_meas$prod, na.rm=TRUE) 
 mean(c_ct_meas$prod, na.rm=TRUE)
 
-
-# Mean and SE of chicks per pair for whole time series
-sd(c_ct_meas$prod,na.rm=TRUE)/sqrt(length(c_ct_meas$prod)-5) # 5 NA's
-mean(c_dat$prod, na.rm=TRUE)
-# Croz SE
-sd(c_dat$prod)/sqrt(length(c_dat$prod))
-# Royds SE
-sd(r_ct_all$prod)/sqrt(length(r_ct_all$prod))
-
-# mean for 4 years of study
-# Royds
-mean(r_dat$prod)
-sd(r_dat$prod)/sqrt(length(r_dat$prod))
-# Croz
-mean(c_dat$prod)
-sd(c_dat$prod)/sqrt(length(c_dat$prod))
-
-# Coefficient of variation
-# Royds
-r_cv_seas_4<-r_ct_all%>%
-  filter(season%in%c("1415","1516","1617","1718"))%>%
+sd(c_cv_seas$mean)/mean(c_cv_seas$mean)
+# overall cv of productivity (including all years and all subcol)
+c_cv_ann<-c_ct_meas%>%
   group_by(season)%>%
-  summarise(mean=mean(prod),sd=sd(prod))%>%
-  mutate(cv=sd/mean)
-mean(r_cv_seas_4$cv, na.rm=TRUE)
+  summarise(ann_prod=mean(prod,na.rm=TRUE))
+sd(c_cv_ann$ann_prod)/mean(c_cv_ann$ann_prod)
 
-# Crozier
-c_cv_seas_4<-c_ct_meas%>%
-  filter(season%in%c("1415","1516","1617","1718"))%>%
-  group_by(season)%>%
-  summarise(mean=mean(prod),sd=sd(prod))%>%
-  mutate(cv=sd/mean)
-mean(c_cv_seas_4$cv, na.rm=TRUE)
+
+# c_ann_prod<-c_ct_meas%>%
+#   group_by(season)%>%
+#   summarise(active_all=sum(active_ct,na.rm=TRUE),chx_all=sum(ch_ct,na.rm=TRUE),prod_all=chx_all/active_all)
+# # CV
+# sd(c_ann_prod$prod_all)/mean(c_ann_prod$prod_all)
+
+
+# Mean and SE of chicks per pair for whole time series (not used in ms)
+# sd(c_ct_meas$prod,na.rm=TRUE)/sqrt(length(c_ct_meas$prod)-5) # 5 NA's
+# # mean(c_dat$prod, na.rm=TRUE)
+# mean(c_ann_prod$prod_all)
+# # Croz SE
+# sd(c_ann_prod$prod_all)/sqrt(length(c_ann_prod$prod_all))
+# # Royds SE
+# sd(r_ann_prod$prod_all)/sqrt(length(r_ann_prod$prod_all))
+# 
+# # mean for 4 years of study
+# # Royds
+# mean(r_dat$prod)
+# sd(r_dat$prod)/sqrt(length(r_dat$prod))
+# # Croz
+# mean(c_dat$prod)
+# sd(c_dat$prod)/sqrt(length(c_dat$prod))
+
+# Coefficient of variation for four years (did not use)
+# Royds
+# r_cv_seas_4<-r_ct_all%>%
+#   filter(season%in%c("1415","1516","1617","1718"))%>%
+#   group_by(season)%>%
+#   summarise(mean=mean(prod),sd=sd(prod))%>%
+#   mutate(cv=sd/mean)
+# mean(r_cv_seas_4$cv, na.rm=TRUE)
+# 
+# # Crozier
+# c_cv_seas_4<-c_ct_meas%>%
+#   filter(season%in%c("1415","1516","1617","1718"))%>%
+#   group_by(season)%>%
+#   summarise(mean=mean(prod),sd=sd(prod))%>%
+#   mutate(cv=sd/mean)
+# mean(c_cv_seas_4$cv, na.rm=TRUE)
 
 
 # statistics requested during review ####
@@ -412,12 +439,13 @@ Crozier GAM
 # # thread suggests using REML because it does a better job with random effects on just your final model for inference and prediction
 
 # remove annual mean so just modeling the spatial variability, not the annual variability
+# note that this is the annual mean of the subcolonies
 ann_prod_anom<-all_dat%>%
   group_by(col,season)%>%
   dplyr::summarise(mean_prod=mean(prod, na.rm=TRUE),se=sd(prod, na.rm=TRUE)/sqrt(n()))%>%
   full_join(all_dat)%>%
   mutate(prod_anom = prod-mean_prod)%>%
-  mutate_at(vars(area,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_windshelt,flow_acc,flow_acc_log,flow_acc_log1p),funs(scale))
+  mutate_at(vars(area,pa_ratio,mean_slope,mean_aspect,adjust_mean_elev,mean_windshelt,flow_acc,flow_acc_log,flow_acc_log1p),list(scale))
 # plot(ann_prod_anom$subcol,ann_prod_anom$prod_anom)
 
 # Set k=6
@@ -425,9 +453,9 @@ ck=6
 # Fit model with no interactions
 # initial submission had fit model with ML because though I couldn't compare models using REML. But REML supposed to be better and gam (mgcv) help indicates ok to compare using AICc so switching  
 c_base_anom <-gam(prod_anom~s(area, k=ck)+s(pa_ratio, k=ck)+s(mean_slope, k=ck)+s(mean_aspect,k=ck, bs="cc") +s(adjust_mean_elev,k=ck)+s(flow_acc_log1p,k=ck)+ s(mean_windshelt,k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
-# check if basis dimensions sifficient
+# check if basis dimensions sufficient
 par(mfrow=c(2,2))
-gam.check(c_base_anom) # flow p-value is significant, but edf not close to k so not adjusting
+gam.check(c_base_anom) # most k-index values <1 but edf not close to k' so not changing anything
 summary(c_base_anom)
 plot(c_base_anom,pages=1, residuals=T)
 concurvity(c_base_anom) # everything <0.8 in the estimate row
@@ -437,10 +465,12 @@ gam.check(c_base_anom)
 
 
 # Fit model with seasonal interaction
-c_seasonx_anom <-gam(prod_anom~s(area, by=season, k=ck) + s(pa_ratio, by=season, k=ck)+s(adjust_mean_elev,by=season, k=ck)+s(mean_slope, by=season, k=ck) +s(mean_aspect,by=season,k=ck, bs="cc") +s(mean_windshelt,by=season,k=ck)+s(flow_acc_log1p,by=season)+skua50*season, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
+c_seasonx_anom <-gam(prod_anom~s(area, by=season, k=ck) + s(pa_ratio, by=season, k=ck)+s(adjust_mean_elev,by=season, k=ck)+s(mean_slope, by=season, k=ck) +s(mean_aspect,by=season,k=ck, bs="cc") +s(mean_windshelt,by=season,k=ck)+s(flow_acc_log1p,by=season,k=ck)+skua50*season, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
 summary(c_seasonx_anom)
+gam.check(c_seasonx_anom) # some p-values significant but edf not close to k' so leaving as is
 
-plot.gam(c_seasonx_anom,pages=1, shade=TRUE)
+par(mfrow=c(6,4))
+plot.gam(c_seasonx_anom, shade=TRUE)
 
 
 # check how compare
@@ -455,44 +485,39 @@ Gams for Royds
 
 # set k for royds
 rk=4
+# create table to use in models
 r_mdat <-filter(ann_prod_anom,col=="royds")
-r_mdat%>%
- group_by(subcol)%>%
-  dplyr::slice(1)%>%
-  filter(pa_ratio>0&pa_ratio<1)
 
-# flow at Royds has non-zero estimates at only 2 subcolonies, doesn't seem like a good idea to include
+
+# flow at Royds has non-zero estimates at only 3 subcolonies, doesn't seem like a good idea to include
 # Fit model with no interactions
-r_base_anom <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_windshelt,k=rk)+s(mean_aspect,k=rk, bs="cc")+flow_acc_log1p+skua50, data=r_mdat, method="ML", select="TRUE",na.action="na.pass")
-summary(r_base_anom)
-gam.check(r_base_anom, pages=1) # looks pretty good, some skew in the residuals
-concurvity(r_base_anom) # estimates all >0.8
-round(concurvity(r_base_anom, full=FALSE)$estimate,2) # but nothing in pairwise comparisons above 0.58
-plot.gam(r_base_anom, pages=1)
+# r_base_anom <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_windshelt,k=rk)+s(mean_aspect,k=rk, bs="cc")+skua50, data=r_mdat, method="ML", select="TRUE",na.action="na.pass")
+# summary(r_base_anom)
+# gam.check(r_base_anom, pages=1) # looks pretty good, some skew in the residuals
+# concurvity(r_base_anom) # estimates all >0.8
+# round(concurvity(r_base_anom, full=FALSE)$estimate,2) # but nothing in pairwise comparisons above 0.58
+# plot.gam(r_base_anom, pages=1)
 
-# model above is behaving oddly with respect to windshelter and pa-ratio
+# base model is behaving oddly when both wind and aspect in the model
 # windshelter and aspect are pretty highly correlated (-0.76)
 # so running models with each independently
-r_base_wind <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_windshelt,k=rk)+flow_acc_log1p+skua50, data=r_mdat, select=TRUE, method="ML")
+r_base_wind <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_windshelt,k=rk)+skua50, data=r_mdat, select=TRUE, method="ML")
 gam.check(r_base_wind)
 summary(r_base_wind)
 plot.gam(r_base_wind, pages=1, shade=T, residuals=T)
 
-r_base_aspect <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc")+flow_acc_log1p+skua50, data=r_mdat, select=TRUE, method="ML")
-gam.check(r_base_aspect)
+# model with no windshelter but including aspect
+# +s(flow_acc_log1p,k=rk)
+r_base_aspect <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc")+skua50, data=r_mdat, select=TRUE, method="ML")
+gam.check(r_base_aspect) # k may be too low but don't want to increase because will likely overfit
 concurvity(r_base_aspect) # several estimates >0.8, pa-ratio and slope
 round(concurvity(r_base_aspect, full=FALSE)$estimate,2) # pa ratio highest, highest concurvity with area and elevation. not much variability in elevation so could remove. Highest concurvity is 0.58 so think I could justify that that is OK
 summary(r_base_aspect)
 plot.gam(r_base_aspect, pages=1, shade=T, residuals=T)
 
-# r_base2 <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk)+skua50, data=r_mdat, select=TRUE, method="ML")
-# 
-# r_base3 <-gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk)+flow_acc_log1p, data=r_mdat, select=TRUE, method="ML")
-# 
-# r_base4 <-gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk), data=r_mdat, select=TRUE, method="ML")
-
-r_seasonx<-  gam(prod_anom~s(area,by=season,k=rk) + s(pa_ratio, by=season,k=rk)+ s(adjust_mean_elev,by=season, k=rk)+s(mean_slope,by=season,k=rk)+ flow_acc_log1p*season+ skua50*season, data=r_mdat, select=TRUE, method="ML")
-gam.check(r_seasonx_anom)
+# model with year interaction
+r_seasonx<-  gam(prod_anom~s(area,by=season,k=rk) + s(pa_ratio, by=season,k=rk)+ s(adjust_mean_elev,by=season, k=rk)+s(mean_slope,by=season,k=rk)+skua50*season, data=r_mdat, select=TRUE, method="ML")
+gam.check(r_seasonx)
 
 library(bbmle)
 AICctab(r_base_wind,r_base_aspect,r_seasonx,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
@@ -542,8 +567,13 @@ mod_tab <- rbind(rmod_tab,cmod_tab)%>%
 Proportion Deviance explained
 ```{r calculate proportion deviance explained}
 
+# change approach? ###
+# remove variable, predict with model and calculate how much that changes observed vs predicted??
+# this should be pretty much the same as using R2 right?
+
+
 # Calculate proportion deviance explained by each model
-# Example fount here: http://r.789695.n4.nabble.com/variance-explained-by-each-term-in-a-GAM-td836513.html
+# Example found here: http://r.789695.n4.nabble.com/variance-explained-by-each-term-in-a-GAM-td836513.html
 # https://r.789695.n4.nabble.com/Re-variance-explained-by-each-predictor-in-GAM-td896222.html
 # b <- gam(y~s(x1)+s(x2))
 # > b1 <- gam(y~s(x1),sp=b$sp[1])
@@ -553,16 +583,7 @@ Proportion Deviance explained
 # > (deviance(b1)-deviance(b))/deviance(b0) ## prop explained by s(x2)
 # > (deviance(b2)-deviance(b))/deviance(b0) ## prop explained by s(x1)
 
-# rethinking how I'm calculating proportion deviance explained
-# don't think it makes sense to refit models including skua since can't pass smoothing paramters so it's reestimating the skua coefficient which is changing the model (?)
-# so now calculating the proportion deviance explained by each model by fitting a model with smoothers passed from base model but comparing to model with skuas removed (and smoothers passed from original)
-
-cb<-update(c_base_anom,.~.-skua50,sp=c_base_anom$sp) # model for comparison with skua removed
-c_base_anom <-gam(prod_anom~s(area, k=ck)+s(pa_ratio, k=ck)+s(mean_slope, k=ck)+s(mean_aspect,k=ck, bs="cc") +s(adjust_mean_elev,k=ck)+s(flow_acc_log1p,k=ck)+ s(mean_windshelt,k=ck)+skua50, data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
-# Fit intercept only model
-cb0 <- gam(prod_anom~1, data=filter(ann_prod_anom,col=="croz"), method="REML")
-summary(cb0)
-method="ML"
+cb<-c_base_anom # model for comparison with skua removed
 
 # Fit model with pa ratio removed and smooths for all other variables supplied from base model
 # Area and wind already dropped
@@ -572,115 +593,95 @@ method="ML"
 
 # area already selected out
 #pa ratio removed
-cb1 <-update(cb,.~.-s(pa_ratio, k=ck),sp=c_base_anom$sp[-c(3,4)])
+cb1 <-update(cb,.~.-s(pa_ratio, k=ck),sp=cb$sp[-c(3,4)])
 summary(cb1)
 plot(cb1,pages=1)
 # slope removed
-cb2 <- update(cb, .~.-s(mean_slope,k=ck),sp=c_base_anom$sp[-c(5,6)])
+cb2 <- update(cb, .~.-s(mean_slope,k=ck),sp=cb$sp[-c(5,6)])
 summary(cb2)
 plot(cb2,pages=1)
 
 # Aspect removed
-cb3 <-update(cb,.~.-s(mean_aspect,k=ck, bs="cc"),sp=c_base_anom$sp[-7])
+cb3 <-update(cb,.~.-s(mean_aspect,k=ck, bs="cc"),sp=cb$sp[-7])
 summary(cb3)
 plot(cb3, pages=1)
 
 # elevation removed
-cb4 <-update(cb,.~.-s(adjust_mean_elev, k=ck),sp=c_base_anom$sp[-c(8,9)])
+cb4 <-update(cb,.~.-s(adjust_mean_elev, k=ck),sp=cb$sp[-c(8,9)])
 summary(cb4)
 plot(cb2, pages=1)
 
 # flow accumulation removed
-cb5 <- update(cb,.~.-s(flow_acc_log1p, k=ck),sp=c_base_anom$sp[-c(10,11)])
+cb5 <- update(cb,.~.-s(flow_acc_log1p, k=ck),sp=cb$sp[-c(10,11)])
 summary(cb5)
 plot(cb5,pages=1)
 
 # windshelter already selected out
+cb6 <- update(cb,.~.-s(mean_windshelt,k=ck),sp=cb$sp[-c(12,13)])
 #Skua removed
-cb6 <- update(c_base_anom,.~.-skua50,sp=c_base_anom$sp) # cb6 is the same as cb
+cb7 <- update(cb,.~.-skua50,sp=cb$sp)
 
+# Percent decrease in R2 when each variable removed
+# c_area_r2 <-(summary(cb)$r.sq-summary(cb7)$r.sq)*100/summary(cb)$r.sq
+c_pa_r2 <- (summary(cb)$r.sq-summary(cb1)$r.sq)*100/summary(cb)$r.sq
+c_slope_r2 <- (summary(cb)$r.sq-summary(cb2)$r.sq)*100/summary(cb)$r.sq
+c_aspect_r2 <- (summary(cb)$r.sq-summary(cb3)$r.sq)*100/summary(cb)$r.sq
+c_elev_r2 <- (summary(cb)$r.sq-summary(cb4)$r.sq)*100/summary(cb)$r.sq
+c_flood_r2<- (summary(cb)$r.sq-summary(cb5)$r.sq)*100/summary(cb)$r.sq
+c_wind_r2 <- (summary(cb)$r.sq-summary(cb6)$r.sq)*100/summary(cb)$r.sq
+c_skua_r2 <- (summary(cb)$r.sq-summary(cb7)$r.sq)*100/summary(cb)$r.sq
 
-# Croz Proportion
-c_pa_ndevex <- summary(cb)$dev.expl-summary(cb1)$dev.expl
-c_slope_ndevex <- summary(cb)$dev.expl-summary(cb2)$dev.expl
-c_aspect_ndevex <- summary(cb)$dev.expl-summary(cb3)$dev.expl
-c_elev_ndevex <- summary(cb)$dev.expl-summary(cb4)$dev.expl
-c_flood_ndevex<- summary(cb)$dev.expl-summary(cb5)$dev.expl
-# c_skua_ndevex<- ((deviance(cb6)-deviance(cb))/deviance(cb0))
-# calculate skua diff between smoother only model and all smoothers + skua (top_mod)
-c_skua_ndevex <- summary(c_base_anom)$dev.expl-summary(cb6)$dev.expl
 
 
 # Royds
-rb0 <- gam(prod_anom~1, data=filter(ann_prod_anom,col=="royds"), method="ML")
-rb <- update(r_base_aspect_1.2,.~.-skua50,sp=r_base_aspect$sp)
-rb<-top_mod
-plot(rb,pages=1)
-plot(r_base_aspect,pages=1)
-method="ML"
-top_mod=r_base_aspect
 rb=r_base_aspect
+plot(rb,pages=1)
 
-
+# area already dropped
 #pa ratio removed
-rb1 <-update(rb,.~.-s(pa_ratio, k=rk),sp=top_mod$sp[-c(3,4)])
+rb1 <-update(rb,.~.-s(pa_ratio, k=rk),sp=rb$sp[-c(3,4)])
 summary(rb1)
 plot(rb1,pages=1)
-
-# rb1.1 <- update(top_mod,.~.-s(pa_ratio, k=rk),sp=top_mod$sp[-c(3,4)])
 # elevation removed
-rb2 <-update(rb,.~.-s(adjust_mean_elev, k=rk),sp=top_mod$sp[-c(5,6)])
+rb2 <-update(rb,.~.-s(adjust_mean_elev, k=rk),sp=rb$sp[-c(5,6)])
 summary(rb2)
 plot(rb2, pages=1)
-# Fit model with slope removed
-rb3 <- update(rb, .~.-s(mean_slope,k=rk),sp=top_mod$sp[-c(7,8)])
+# slope removed
+rb3 <- update(rb, .~.-s(mean_slope,k=rk),sp=rb$sp[-c(7,8)])
 summary(rb3)
 plot(rb3,pages=1)
-# Aspect removed
-# rb4 <-update(rb,.~.-s(mean_aspect,k=rk, bs="cc"),sp=top_mod$sp[-9])
-# summary(rb4)
-# plot(rb4, pages=1)
+# Aspect already dropped
 # flow accumulation removed
-rb5 <- update(rb,.~.-flow_acc_log1p,sp=top_mod$sp)
-summary(rb5)
-plot(rb5,pages=1)
+# rb4 <- update(rb,.~.-s(flow_acc_log1p,k=rk),sp=rb$sp[-c(10,11)])
+# summary(rb4)
+# plot(rb4,pages=1)
 #Skua removed
-rb6 <- update(r_base_aspect,.~.-skua50,sp=r_base_aspect$sp)
+rb5 <- update(rb,.~.-skua50,sp=rb$sp)
 # area removed
-rb7 <- update(rb,.~.-s(area,k=rk),sp=top_mod$sp[-c(1,2)])
+rb6 <- update(rb,.~.-s(area,k=rk),sp=rb$sp[-c(1,2)])
 
-
-# Proportion deviance explained
-r_pa_ndevex <- summary(rb)$dev.expl-summary(rb1)$dev.expl
-r_elev_ndevex <- summary(rb)$dev.expl-summary(rb2)$dev.expl
-r_slope_ndevex <- summary(rb)$dev.expl-summary(rb3)$dev.expl
-# r_aspect_ndevex<- summary(rb)$dev.expl-summary(rb4)$dev.expl
-r_flood_ndevex<- summary(rb)$dev.expl-summary(rb5)$dev.expl
-# calculate skua diff between smoother only model and all smoothers + skua (top_mod)
-r_skua_ndevex <- summary(top_mod)$dev.expl-summary(rb6)$dev.expl
 
 # percent change in R2 when each variable removed
-r_area_r2 <-(summary(rb)$r.sq-summary(rb7)$r.sq)*100/summary(rb)$r.sq
+r_area_r2 <-(summary(rb)$r.sq-summary(rb6)$r.sq)*100/summary(rb)$r.sq
 r_pa_r2 <- (summary(rb)$r.sq-summary(rb1)$r.sq)*100/summary(rb)$r.sq
 r_elev_r2 <- (summary(rb)$r.sq-summary(rb2)$r.sq)*100/summary(rb)$r.sq
 r_slope_r2 <- (summary(rb)$r.sq-summary(rb3)$r.sq)*100/summary(rb)$r.sq
-# r_aspect_ndevex<- summary(rb)$dev.expl-summary(rb4)$dev.expl
-r_flood_r2<- (summary(rb)$r.sq-summary(rb5)$r.sq)*100/summary(rb)$r.sq
+# r_flood_r2<- (summary(rb)$r.sq-summary(rb4)$r.sq)*100/summary(rb)$r.sq
 # calculate skua diff between smoother only model and all smoothers + skua (top_mod)
-r_skua_r2 <- (summary(top_mod)$r.sq-summary(rb6)$r.sq)*100/summary(rb)$r.sq
-
-# sum(r_pa_r2,r_elev_ndevex,r_slope_r2,r_flood_r2,r_skua_r2)
-# Make table to proportion deviance explained
-rb_term_ndevex <- round(c(0,r_pa_ndevex,r_elev_ndevex,r_slope_ndevex,0,NA,r_flood_ndevex,r_skua_ndevex),3)
-
-rb_term_r2 <- round(c(r_area_r2,r_pa_r2,r_elev_r2,r_slope_r2,0,NA,r_flood_r2,r_skua_r2),1)
-
-sum(rb_term_ndevex, na.rm=TRUE)
-
-cb_term_ndevex<- round(c(0,c_pa_ndevex,c_elev_ndevex, c_slope_ndevex,c_aspect_ndevex, 0,c_flood_ndevex, c_skua_ndevex),3)
-sum(cb_term_ndevex)
-
-term_devex <- data.frame(term=c("Area","Perim/area_ratio","Elevation","Slope","Aspect","Wind_shelter", "flow_acc","skua"), Croz_ndevex=cb_term_ndevex,Royds_ndevex=rb_term_ndevex)
+r_skua_r2 <- (summary(rb)$r.sq-summary(rb5)$r.sq)*100/summary(rb)$r.sq
+# 
+# # sum(r_pa_r2,r_elev_ndevex,r_slope_r2,r_flood_r2,r_skua_r2)
+# # Make table to proportion deviance explained
+# rb_term_ndevex <- round(c(0,r_pa_ndevex,r_elev_ndevex,r_slope_ndevex,0,NA,r_flood_ndevex,r_skua_ndevex),3)
+rb_term_r2 <- round(c(r_area_r2,r_pa_r2,r_elev_r2,r_slope_r2,NA,NA,r_flood_ndevex,r_skua_ndevex),3)
+# rb_term_r2 <- round(c(0,r_pa_r2,r_elev_r2,r_slope_r2,0,NA,r_flood_r2,r_skua_r2),1)
+# 
+# sum(rb_term_ndevex, na.rm=TRUE)
+# 
+# cb_term_ndevex<- round(c(0,c_pa_ndevex,c_elev_ndevex, c_slope_ndevex,c_aspect_ndevex, 0,c_flood_ndevex, c_skua_ndevex),3)
+# sum(cb_term_ndevex)
+# 
+# term_devex <- data.frame(term=c("Area","Perim/area_ratio","Elevation","Slope","Aspect","Wind_shelter", "flow_acc","skua"), Croz_ndevex=cb_term_ndevex,Royds_ndevex=rb_term_ndevex)
 
 # write.csv(term_devex,"Z:/Informatics/S031/analyses/aschmidt/subcol_var/results/gam_model_term_deviance_explained_v5.csv")
 
@@ -695,7 +696,7 @@ croz_ann_prod <- filter(ann_prod_anom,col=="croz")%>%
   mutate(predict_base=predict(c_base_anom))
 
 royds_ann_prod <- filter(ann_prod_anom,col=="royds")%>%
-  mutate(predict_base=predict(r_base_anom))
+  mutate(predict_base=predict(r_base_aspect), p_rb1=predict(rb1), p_rb2=predict(rb2),p_rb3=predict(rb3), p_rb4=predict(rb4),p_rb5=predict(rb5),p_rb6=predict(rb6))
 
 ann_prod_pred<-croz_ann_prod%>%
   full_join(royds_ann_prod)
@@ -740,9 +741,20 @@ ggplot(ann_prod_pred,aes(prod_anom,predict_base, colour=col))+
 #   geom_text(x=-0.6, y=0.4, label="C. Crozier")
 # print(c_ovp)
 
-# 
+# calculate percent increase in correlation between observed versus predicted when variable in question is added
 rcorr(croz_ann_prod$prod_anom,croz_ann_prod$predict_base)
-rcorr(royds_ann_prod$prod_anom,royds_ann_prod$predict_base)
+rcor_base <- rcorr(royds_ann_prod$prod_anom,royds_ann_prod$predict_base)$r[1,2]
+r_pa_dif <- (rcor_base-rcorr(royds_ann_prod$prod_anom,royds_ann_prod$p_rb1)$r[1,2])/rcorr(royds_ann_prod$prod_anom,royds_ann_prod$p_rb1)$r[1,2] # pa_ratio
+r_elev_dif<- (rcor_base-rcorr(royds_ann_prod$prod_anom,royds_ann_prod$p_rb2)$r[1,2])/rcorr(royds_ann_prod$prod_anom,royds_ann_prod$p_rb2)$r[1,2] #elevation
+r_slope_dif <- (rcor_base-rcorr(royds_ann_prod$prod_anom,royds_ann_prod$p_rb3)$r[1,2])/ rcorr(royds_ann_prod$prod_anom,royds_ann_prod$p_rb3)$r[1,2] # slope
+# r_flow_dif <- (rcor_base-rcorr(royds_ann_prod$prod_anom,royds_ann_prod$p_rb4)$r[1,2])/ rcorr(royds_ann_prod$prod_anom,royds_ann_prod$p_rb4)$r[1,2] # flow
+r_skua_dif <- (rcor_base-rcorr(royds_ann_prod$prod_anom,royds_ann_prod$p_rb5)$r[1,2])/ rcorr(royds_ann_prod$prod_anom,royds_ann_prod$p_rb5)$r[1,2] #skua 
+r_area_dif <- (rcor_base-rcorr(royds_ann_prod$prod_anom,royds_ann_prod$p_rb6)$r[1,2])/ rcorr(royds_ann_prod$prod_anom,royds_ann_prod$p_rb6)$r[1,2] #area 
+
+
+
+
+rcorr(royds_ann_prod$prod_anom,royds_ann_prod$p_rb7) # area
 # 
 # 
 # r_ovp<-ggplot(royds_ann_prod,aes(prod_anom,predict_base))+
