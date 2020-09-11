@@ -21,13 +21,14 @@ croz_bound <- readOGR("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz
 proj <-"+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
 croz_bound_t <- spTransform(croz_bound,proj)
 ext <- extent(croz_bound_t)+0.0002
+
 # aspect
-c_aspect <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_aspect_corrected.tif")
+c_aspect <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/rev2/croz_aspect_corrected180.tif")
 c_aspect_t <- crop(projectRaster(c_aspect, crs=proj),ext)
 c_aspect_spdf <- as(c_aspect_t, "SpatialPixelsDataFrame")
 c_aspect_df <- as.data.frame(c_aspect_spdf)%>%
-  rename(value=croz_aspect_corrected)%>%
-  mutate(value=ifelse(value<0,NA,value))
+  rename(value=croz_aspect_corrected180)%>%
+  mutate(value=ifelse(value<(-180),NA,value))
 
 # slope
 c_slope <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_slope.tif")
@@ -78,7 +79,7 @@ p.c_aspect<- ggplot() +
   geom_raster(data=c_aspect_df, aes(x=x, y=y, fill=value), alpha=0.8)+
   geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
   fill=NA, col="white",size=1) +
-  scale_fill_gradientn(colors=col.p,limits =c(0,360), "Aspect (°)") +
+  scale_fill_gradientn(colors=col.p,limits =c(-180,180), "Aspect (°)") +
   theme(legend.position=c("right")) +
   # theme(legend.key.width=unit(0.5, "cm"), legend.key.height = unit(2,"cm"))+
   theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+

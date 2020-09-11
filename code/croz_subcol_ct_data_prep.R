@@ -295,10 +295,11 @@ flow_acc <- read_csv("data/croz_selected_mean_flow_acc_snow_v4.csv")%>% #v4 incl
 # now can subtract 360 from the averages and should be correct.
 # there are a few values that are now negative, but leaving that way for now because will make it easier for the model to fit. Will need to deal with it at the prediction stage
 # changed here for v18
-aspect_14_raw <- read_csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/rev2/croz_selected_aspect_corrected_adjust.txt")
+
+# v19: aspect calculated by taking the atan2 of the mean cosine and sine of the corrected aspect raster
+aspect_14_raw <- read_csv("data/croz_selected_aspect_rev2_090920.txt")
 aspect_14_format <- aspect_14_raw%>%
-  dplyr::select(subcol=SUBCOL, mean_aspect=MEAN)%>%
-  mutate(mean_aspect=mean_aspect-360)
+  dplyr::select(subcol=SUBCOL, mean_aspect=MEAN_ASPECT)
 
 # load elevation stats
 elev_14_raw <- read_csv("data/croz_selected_mean_elev.txt")
@@ -401,5 +402,5 @@ all_meas_ct[is.na(all_meas_ct$skua50), "skua50"]<- 0
 all_meas_ct[is.na(all_meas_ct$flood_risk), "flood_risk"]<- 0
 
 # # write data to file
-write.csv(all_meas_ct, "data/croz_selected_meas_ct_all_v18.csv", row.names = FALSE)
+write.csv(all_meas_ct, "data/croz_selected_meas_ct_all_v19.csv", row.names = FALSE)
 

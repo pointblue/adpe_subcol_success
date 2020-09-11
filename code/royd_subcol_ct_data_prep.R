@@ -105,9 +105,10 @@ r_flow_acc_14_snowformat <- read.csv("data/royds_mean_flow_acc_snow_v2.csv", hea
   mutate(flow_acc_log1p=log1p(flow_acc),flow_acc_log=log(flow_acc))
 
 # load aspect stats
-r_aspect_14_raw <- read.csv("data/royds_mean_aspect_corrected.csv", header=TRUE)
+# loading new aspect table with means calculated using trig functions
+r_aspect_14_raw <- read.csv("data/royds_subcol_aspect_rev2_090820.csv", header=TRUE)
 r_aspect_14_format <- r_aspect_14_raw%>%
-  select(subcol=SUBCOL,mean_aspect=MEAN)
+  dplyr::select(subcol=SUBCOL,mean_aspect=MEAN_ASPECT)
 
 r_join <- r_geom_14_format%>%
   full_join(r_aspect_14_format)%>%
@@ -179,5 +180,5 @@ anti_join(r_ct_all4,r_all_meas_ct)
 
 # 
 # write data to file
-write.csv(r_all_meas_ct, "data/royds_selected_meas_ct_all_v10.csv", row.names = FALSE)
+write.csv(r_all_meas_ct, "data/royds_selected_meas_ct_all_v12.csv", row.names = FALSE)
 
