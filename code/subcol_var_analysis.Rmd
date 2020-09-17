@@ -118,12 +118,12 @@ col3="#5EA8A7" # lagoon
 subcol_attr <- all_dat%>%
   dplyr::select(col:subcol,area_name:area,pa_ratio,mean_aspect:skua50,flow_acc_log1p)%>%
   gather(attr,value=measurement,-col,-season,-area_name,-subcol)%>%
-  mutate(measurement=as.numeric(measurement),attr=factor(attr, labels=c("Elevation (m)","Area (m2)","Flow accumulation (ln)","Aspect (deg)","Slope (deg)","Wind shelter index","Perim/Area ratio", "Skua 50m")),
-           attr=ordered(attr,levels=c("Area (m2)","Perim/Area ratio","Aspect (deg)","Slope (deg)","Flow accumulation (ln)","Wind shelter index","Elevation (m)", "Skua 50m")))%>%
+  mutate(measurement=as.numeric(measurement),attr=factor(attr, labels=c("Elevation (m)","Area (m2)","Flow accumulation (log)","Aspect (°)","Slope (°)","Wind shelter index","Perim-Area ratio", "Skua 50m")),
+           attr=ordered(attr,levels=c("Area (m2)","Perim-Area ratio","Aspect (°)","Slope (°)","Flow accumulation (log)","Wind shelter index","Elevation (m)", "Skua 50m")))%>%
   filter(!is.na(measurement))
 
 # label panels with significant difference
-attr_sig <- data.frame(attr=ordered(c("Area (m2)","Perim/Area ratio","Aspect (deg)","Slope (deg)","Flow accumulation (ln)","Wind shelter index","Elevation (m)", "Skua 50m")), sig=as.character(c("*","*","*","","*","*","*","*")))
+attr_sig <- data.frame(attr=ordered(c("Area (m2)","Perim-Area ratio","Aspect (°)","Slope (°)","Flow accumulation (log)","Wind shelter index","Elevation (m)", "Skua 50m")), sig=as.character(c("*","*","*","","*","*","*","*")))
 
 subcol_attr%>%
   group_by(subcol,attr)%>%
@@ -139,23 +139,23 @@ ggplot(aes(attr,measurement, fill=col,color=col))+
   # scale_fill_viridis(discrete=TRUE)+
   scale_color_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
   scale_fill_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
-  guides(fill=guide_legend(title="Colony"),color=guide_legend(title="Colony"))+
   theme_classic()+
   theme(strip.placement.x = "outside",
         strip.placement.y="outside",
     strip.background = element_blank(),
                      panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(), panel.border=element_blank(),axis.line= element_line(colour = "black"),axis.text.x=element_blank(),panel.spacing = unit(1.5, "lines"),
-    axis.text.y=element_text(size=14),
-    text=element_text(size=20),
-    plot.margin=margin(t = 10, r = 0, b = 0, l = 0, unit = "pt"))+
-    # legend.position="none")+
-  guides(fill=guide_legend(title="Colony"))+
+    strip.text=element_text(size=11), axis.text=element_text(size=9),
+    plot.margin=margin(t = 10, r = 2, b = 0, l = 0, unit = "pt"),
+    legend.position="right")+
+  # guides(fill=guide_legend(title="Colony"))+
+    guides(fill=guide_legend(title="Colony"),color=guide_legend(title="Colony"))+
   geom_text(data=attr_sig,aes(label=sig),show.legend=FALSE, x=Inf,y=Inf,hjust = 3,
-    vjust = 1.5,size=12,inherit.aes = FALSE) # add stars for significant difference
+    vjust = 1.5,size=12,inherit.aes = FALSE)
+# add stars for significant difference
 
 
-# Note, added skua panel separately in illustrator because couldn't figure out how to do it easily in R
+?them# Note, added skua panel separately in illustrator because couldn't figure out how to do it easily in R
 # Skua panel: see below
 
 # aspect panel to be added separately
@@ -253,8 +253,8 @@ wilcox.test(pair_dat$`Skua 50m` [pair_dat$col=="croz"],pair_dat$`Skua 50m`[pair_
 
 # comparisons between study subcolonies at each colony
 # average aspect at each colony
-mean(pair_dat$`Aspect (deg)`[pair_dat$col=="croz"])
-mean(pair_dat$`Aspect (deg)`[pair_dat$col=="royds"])
+mean(pair_dat$`Aspect (°)`[pair_dat$col=="croz"])
+mean(pair_dat$`Aspect (°)`[pair_dat$col=="royds"])
 
 # average perimeter/area ratio at each colony
 mean(pair_dat$`Perim/Area ratio`[pair_dat$col=="croz"])
@@ -286,8 +286,9 @@ cr_count_all <- c_ct_meas%>%
                                       "2013","2014","2015","2016","2017")))%>%
   filter(!is.na(prod))
 
+
 # Plot time series together (Fig 2.) ####
-ggplot(cr_count_all,aes(season,prod, fill=col, color=col))+
+ggplot(cr_count_all,aes(season,prod, fill=col, color=col,))+
   geom_boxplot(alpha = 0.7,position = position_dodge(preserve = "single"))+
   ylab("Breeding success (chicks/pair)")+
   xlab("Season")+
@@ -295,8 +296,12 @@ ggplot(cr_count_all,aes(season,prod, fill=col, color=col))+
   #              shape=19, size=3,show.legend = FALSE,position=position_dodge(width=0.7)) +
   scale_color_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
   scale_fill_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
+  scale_x_discrete(breaks=c("2002","2004","2006","2008","2010","2012","2014","2016"))+
   guides(fill=guide_legend(title="Colony"),color=guide_legend(title="Colony"))+
-  theme_classic()
+  theme_classic()+
+  theme(axis.text=element_text(size=14),
+        axis.title=element_text(size=16), legend.title = element_text(size = 18), legend.text = element_text(size=14))
+
 
 
 # Royds CV
@@ -371,12 +376,12 @@ summ_cts_yr <- all_dat%>%
   summarise(n=n())
 
 # Difference in means for whole time series
-t_cr_all <- t.test(c_ct_meas$prod, r_ct_all$prod)
+# t_cr_all <- t.test(c_ct_meas$prod, r_ct_all$prod)
 # fit gls model to test for differences in means
 # requires library()
 nestinginfo <- groupedData(prod ~ col | subcol, data= cr_count_all)
-fit.compsym <- gls(prod ~ factor(col), data=nestinginfo, corr=corCompSymm(,form= ~ 1 | subcol))
-summary(fit.compsym)
+# fit.compsym <- gls(prod ~ factor(col), data=nestinginfo, corr=corCompSymm(,form= ~ 1 | subcol))
+# summary(fit.compsym)
 fit.ar1 <- gls(prod ~ factor(col), data=nestinginfo, corr=corAR1(, form= ~ 1 | subcol))
 summary(fit.ar1)
 anova(fit.compsym,fit.ar1)
@@ -387,14 +392,41 @@ cr_4 <- cr_count_all%>%
 
 
 # fit gls model to test for differences in means
-nestinginfo4 <- groupedData(prod ~ col | subcol, data= all_dat)
-fit.compsym4 <- gls(prod ~ factor(col), data=nestinginfo4, corr=corCompSymm(,form= ~ 1 | subcol))
-summary(fit.compsym4)
-fit.ar14 <- gls(prod ~ factor(col), data=nestinginfo4, corr=corAR1(, form= ~ 1 | subcol))
+nestinginfo4 <- groupedData(prod ~ col | subcol, data= cr_4)
+# fit.compsym4 <- gls(prod ~ factor(col), data=nestinginfo4, corr=corCompSymm(,form= ~ 1 | subcol), method="ML")
+# summary(fit.compsym4)
+fit.ar14 <- gls(prod ~ factor(col), data=nestinginfo4, corr=corAR1(, form= ~ 1 | subcol), method="ML")
 summary(fit.ar14)
 anova(fit.compsym4,fit.ar14)
 
+# difference in mean between previous years and last 4
+# Croz
+c_4 <- cr_count_all%>%
+  mutate(last4=factor(ifelse(season%in%c(2014,2015,2016,2017),1,0)))%>%
+  filter(col=="croz")
+c_l4info <- groupedData(prod ~ last4 | subcol, data= c_4)
+c_fit.arl4 <- gls(prod ~ factor(last4), data=c_l4info, corr=corAR1(, form= ~ 1 | subcol), method="ML")
+summary(c_fit.arl4)
 
+
+filter(c_4,last4==0)%>%
+  summarise(mean=mean(prod))
+
+filter(c_4,last4==1)%>%
+  summarise(mean=mean(prod))
+# Royds
+r_4 <- cr_count_all%>%
+  mutate(last4=factor(ifelse(season%in%c(2014,2015,2016,2017),1,0)))%>%
+  filter(col=="royds")
+r_l4info <- groupedData(prod ~ last4 | subcol, data= r_4)
+r_fit.arl4 <- gls(prod ~ factor(last4), data=r_l4info, corr=corAR1(, form= ~ 1 | subcol), method="ML")
+summary(r_fit.arl4)
+
+filter(r_4,last4==0)%>%
+  summarise(mean=mean(prod))
+
+filter(r_4,last4==1)%>%
+  summarise(mean=mean(prod))
 
 
 ```
@@ -547,7 +579,7 @@ Proportion Deviance explained
 # > (deviance(b1)-deviance(b))/deviance(b0) ## prop explained by s(x2)
 # > (deviance(b2)-deviance(b))/deviance(b0) ## prop explained by s(x1)
 
-cb<-c_base_anom # model for comparison with skua removed
+cb<-c_seasonx_anom # model for comparison
 
 # Fit model with pa ratio removed and smooths for all other variables supplied from base model
 # Area and wind already dropped
@@ -555,9 +587,10 @@ cb<-c_base_anom # model for comparison with skua removed
 
 #### Note: order of variables must match base model!
 
-# area already selected out
+# area removed
+cb0 <- update(cb,.~.-s(area, by=season, k=ck),sp=cb$sp[-c(1:8)])
 #pa ratio removed
-cb1 <-update(cb,.~.-s(pa_ratio, k=ck),sp=cb$sp[-c(3,4)])
+cb1 <-update(cb,.~.-s(pa_ratio, by=season, k=ck),sp=cb$sp[-c(3,4)])
 summary(cb1)
 plot(cb1,pages=1)
 # slope removed
@@ -595,6 +628,14 @@ c_flood_r2<- (summary(cb)$r.sq-summary(cb5)$r.sq)*100/summary(cb)$r.sq
 c_wind_r2 <- (summary(cb)$r.sq-summary(cb6)$r.sq)*100/summary(cb)$r.sq
 c_skua_r2 <- (summary(cb)$r.sq-summary(cb7)$r.sq)*100/summary(cb)$r.sq
 
+c_pa_dr2 <- (summary(cb)$r.sq-summary(cb1)$r.sq)
+c_slope_dr2 <- (summary(cb)$r.sq-summary(cb2)$r.sq)
+c_aspect_dr2 <- (summary(cb)$r.sq-summary(cb3)$r.sq)
+c_elev_dr2 <- (summary(cb)$r.sq-summary(cb4)$r.sq)
+c_flood_dr2<- (summary(cb)$r.sq-summary(cb5)$r.sq)
+c_wind_dr2 <- (summary(cb)$r.sq-summary(cb6)$r.sq)
+c_skua_dr2 <- (summary(cb)$r.sq-summary(cb7)$r.sq)
+
 
 
 # Royds
@@ -629,7 +670,7 @@ rb6 <- update(rb,.~.-s(area,k=rk),sp=rb$sp[-c(1,2)])
 summary(rb6)
 
 
-# percent change in R2 when each variable removed
+# percent decrease in base R2 when each variable removed
 r_area_r2 <-(summary(rb)$r.sq-summary(rb6)$r.sq)*100/summary(rb)$r.sq
 r_pa_r2 <- (summary(rb)$r.sq-summary(rb1)$r.sq)*100/summary(rb)$r.sq
 r_elev_r2 <- (summary(rb)$r.sq-summary(rb2)$r.sq)*100/summary(rb)$r.sq
@@ -638,15 +679,31 @@ r_aspect_r2 <- (summary(rb)$r.sq-summary(rb4)$r.sq)*100/summary(rb)$r.sq
 # r_flood_r2<- (summary(rb)$r.sq-summary(rb4)$r.sq)*100/summary(rb)$r.sq
 # calculate skua diff between smoother only model and all smoothers + skua (top_mod)
 r_skua_r2 <- (summary(rb)$r.sq-summary(rb5)$r.sq)*100/summary(rb)$r.sq
+
+
+r_area_dr2 <-(summary(rb)$r.sq-summary(rb6)$r.sq)
+r_pa_dr2 <- (summary(rb)$r.sq-summary(rb1)$r.sq)
+r_elev_dr2 <- (summary(rb)$r.sq-summary(rb2)$r.sq)
+r_slope_dr2 <- (summary(rb)$r.sq-summary(rb3)$r.sq)
+r_aspect_dr2 <- (summary(rb)$r.sq-summary(rb4)$r.sq)
+# r_flood_r2<- (summary(rb)$r.sq-summary(rb4)$r.sq)*100/summary(rb)$r.sq
+# calculate skua diff between smoother only model and all smoothers + skua (top_mod)
+r_skua_dr2 <- (summary(rb)$r.sq-summary(rb5)$r.sq)
 # 
 
-# # Make table to proportion deviance explained
-rb_term_r2 <- round(c(r_area_r2,r_pa_r2,r_elev_r2,r_slope_r2,r_aspect_r2,NA,NA,r_skua_r2),1)
-cb_term_r2 <- round(c(0,c_pa_r2,c_elev_r2,c_slope_r2,c_aspect_r2,c_wind_r2,c_flood_r2,c_skua_r2),1)
+# Make table of percent change in R2
+rb_term_r2 <- round(c(r_area_r2,r_pa_r2,r_aspect_r2,r_slope_r2,NA,NA,r_elev_r2,r_skua_r2),1)
+cb_term_r2 <- round(c(0,c_pa_r2,c_aspect_r2,c_slope_r2,c_flood_r2,c_wind_r2,c_elev_r2,c_skua_r2),1)
 
-term_r2_tab <-data.frame(term=c("Area","Perim/area_ratio","Elevation","Slope","Aspect","Wind_shelter", "flow_acc","skua"), croz_delta_r2=cb_term_r2,royds_delta_r2 = rb_term_r2) 
+rb_term_dr2 <- round(c(r_area_dr2,r_pa_dr2,r_aspect_dr2,r_slope_dr2,NA,NA,r_elev_dr2,r_skua_dr2),3)
+cb_term_dr2 <- round(c(0,c_pa_dr2,c_aspect_dr2,c_slope_dr2,c_flood_dr2,c_wind_dr2,c_elev_dr2,c_skua_dr2),)
+
+
+term_r2_tab <-data.frame(term=c("Area","Perim-area_ratio","Aspect","Slope","flow_acc","Wind_shelter","Elevation","skua"), croz_delta_r2=cb_term_dr2,royds_delta_r2=rb_term_dr2,croz_perc_r2=cb_term_r2,royds_perc_r2 = rb_term_r2) 
+
 term_r2_tab
 
+write.csv(term_r2_tab, "data/delta_r2_tab.csv",row.names = FALSE)
 
 ```
 
@@ -705,6 +762,7 @@ New Figure 4 for revision
 # Making a new function to do this
 # need to predict each partial smooth and then plot
 plot.smooths <- function(x, data, model, ylim=NULL, xlim=NULL,xlab=NULL,ylab="Effect on \n breeding success",col_x, add){
+  par(bty="l")
 #create a sequence of new data for variable of interest
 new_dat <- seq(min(data[,x]),max(data[,x]),length=nrow(data))
 # predict partial smooth
@@ -718,7 +776,7 @@ s.var <- paste("s.",x,".",sep="")
 plot_dat <- data.frame(x=data[,x],fit_var=fit[,s.var])
 # plot smooth but leave blank for now so that we can add the line on top of the polygon
 if(add==FALSE){
-plot(plot_dat[,x],plot_dat[,"fit_var"],ylim=ylim,xlim=xlim,add=add, xlab=xlab,ylab=ylab, type="n",cex.lab=1.4)
+plot(plot_dat[,x],plot_dat[,"fit_var"],ylim=ylim,xlim=xlim,add=add, xlab=xlab,ylab=ylab, type="n",cex.lab=1.6)
   polygon(c(new_dat, rev(new_dat)), 
         c(fit.low95[,s.var],rev(fit.up95[,s.var])), col=alpha(col_x,0.7),border=NA)
 # add predicted line
@@ -736,41 +794,41 @@ lines(plot_dat[,x],plot_dat[,"fit_var"],  lwd=1, col=col_x)
 # Croz and Royds on same panel
 # dev.new()
 # cairo_ps()
-par(mfrow=c(4,2),mar=c(4,6,3,1),mgp=c(2.1,0.4,0), las=1, tck=-0.02)
+par(mfrow=c(3,3),mar=c(4,6,3,1),mgp=c(2.1,0.4,0), las=1, tck=-0.02)
 ylim=c(-.5,0.45)
 
 # Area ##
 # Croz
 xlim <- c(min(pred_dat[pred_dat$col=="croz","area"],pred_dat[pred_dat$col=="royds","area"]),max(pred_dat[pred_dat$col=="croz","area"],pred_dat[pred_dat$col=="royds","area"]))
-# plot.smooths(x="area",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Area",col_x=col1)
-plot.smooths(x="area",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=FALSE,ylim=ylim,xlab=expression(Area~(m^2)),col_x=col2)
+plot.smooths(x="area",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Area",col_x=col1)
+plot.smooths(x="area",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlab=expression(Area~(m^2)),col_x=col2)
 
 
 # PA ratio
 var="pa_ratio"
 xlim <- c(min(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]),max(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]))
-plot.smooths(x="pa_ratio",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Perim/Area ratio",col_x=col1)
+plot.smooths(x="pa_ratio",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Perim-Area ratio",col_x=col1)
 plot.smooths(x="pa_ratio",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlab="Perim/Area ratio",col_x=col2)
-legend("bottomleft", legend=c("Crozier", "Royds"), col=c(col1, col2), border=c(col1,col2), fill=c(col1,col2))
 
-# Elevation
-var="adjust_mean_elev"
-xlim <- c(min(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]),max(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]))
-plot.smooths(x="adjust_mean_elev",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Elevation (m)",col_x=col1)
-plot.smooths(x="adjust_mean_elev",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,col_x=col2)
-
-# Slope
-var="mean_slope"
-xlim <- c(min(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]),max(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]))
-plot.smooths(x="mean_slope",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Slope (degrees)",col_x=col1)
-plot.smooths(x="mean_slope",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlab="Slope",col_x=col2)
 
 # Aspect
 var="mean_aspect"
 # xlim <- c(min(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]),max(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]))
 xlim=c(-150,150)
-plot.smooths(x="mean_aspect",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Aspect (degrees)",col_x=col1)
-# plot.smooths(x="mean_aspect",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlim=xlim,xlab="Aspect",col_x=col2)
+plot.smooths(x="mean_aspect",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Aspect (°)",col_x=col1)
+plot.smooths(x="mean_aspect",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlim=xlim,xlab="Aspect",col_x=col2)
+
+# Slope
+var="mean_slope"
+xlim <- c(min(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]),max(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]))
+plot.smooths(x="mean_slope",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Slope (°)",col_x=col1)
+plot.smooths(x="mean_slope",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlab="Slope",col_x=col2)
+
+# Flow accumulation
+var="flow_acc_log1p"
+xlim <- c(min(pred_dat[,var]),max(pred_dat[,var]))
+plot.smooths(x="flow_acc_log1p",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Flow accumulation (log)",col_x=col1)
+# plot.smooths(x="flow_acc_log1p",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlab="Flow accumulation",col_x=col2)
 
 # Wind shelter
 var="mean_windshelt"
@@ -779,11 +837,12 @@ xlim=c(0.12,0.5)
 plot.smooths(x="mean_windshelt",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Wind shelter Index",col_x=col1)
 # plot.smooths(x="mean_windshelt",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlim=xlim,xlab="Wind shelter",col_x=col2)
 
-# Flow accumulation
-var="flow_acc_log1p"
-xlim <- c(min(pred_dat[,var]),max(pred_dat[,var]))
-plot.smooths(x="flow_acc_log1p",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Flow accumulation (log)",col_x=col1)
-# plot.smooths(x="flow_acc_log1p",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,xlab="Flow accumulation",col_x=col2)
+# Elevation
+var="adjust_mean_elev"
+xlim <- c(min(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]),max(pred_dat[pred_dat$col=="croz",var],pred_dat[pred_dat$col=="royds",var]))
+plot.smooths(x="adjust_mean_elev",data=pred_dat[pred_dat$col=="croz",],model=c_base_pred,add=FALSE,ylim=ylim,xlim=xlim,xlab="Elevation (m)",col_x=col1)
+plot.smooths(x="adjust_mean_elev",data=pred_dat[pred_dat$col=="royds",],model=r_base_pred,add=TRUE,ylim=ylim,col_x=col2)
+
 
 # Skua
 var="skua50"
@@ -804,12 +863,12 @@ cr_skua <- data.frame(col=c("croz","croz", "royds","royds"),
                       ci=c(1.96*c_skua0_se, 1.96*c_skua1_se,1.96*r_skua0_se,1.96*r_skua1_se))
 
 skua_mod<-ggplot(cr_skua,aes(skua50,coef,col=col))+
-  geom_point(size=3,position=position_dodge(width=0.15))+
-  geom_errorbar(aes(ymin=coef-ci,ymax=coef+ci),width=0.05, size=0.5,position=position_dodge(width=0.15))+
-  theme_bw()+
+  geom_point(size=3,position=position_dodge(width=0.2))+
+  geom_errorbar(aes(ymin=coef-ci,ymax=coef+ci),width=0.05, size=0.5,position=position_dodge(width=0.2))+
+  theme_classic()+
   theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"),
         legend.position = "none",
-        axis.title=element_text(size=11),
+        axis.title=element_text(size=13),
         axis.text=element_text(size=8.5),
         plot.margin = margin(17,10,0,15, "pt"),
         axis.title.x=element_text(margin = margin(t = 8, r = 0, b = 0, l = 0)))+
@@ -820,9 +879,9 @@ skua_mod<-ggplot(cr_skua,aes(skua50,coef,col=col))+
 
 
 plot.new()
-vp <- grid::viewport(height = unit(0.25,"npc"), width=unit(0.5, "npc"), 
-              just = c("right","bottom"),
-              y = 0, x = 0.5,layout.pos.row = 4,layout.pos.col = 2)
+vp <- grid::viewport(height = unit(0.31,"npc"), width=unit(0.34, "npc"), 
+              just = c("center","bottom"),
+              y = 0.005, x = 0.5,layout.pos.row = 3,layout.pos.col = 2)
 print(skua_mod, vp = vp)
 
 
@@ -895,7 +954,7 @@ termplot(r_base_pred, terms=c("skua50"), se=TRUE, col.term= col3, lwd.term=3, lw
 ```
 
 Predict Productivity Spatially
-```{r Predict productivity to space}
+```{r Predict productivity to at croz}
 # read in rasters to use for prediction
 library(raster)
 # format data for spatial prediction
@@ -1008,7 +1067,9 @@ names(royds_stack)<-c("area","skua50","pa_ratio","mean_slope","adjust_mean_elev"
 
 # Predict to all subcolonies at Crozier
 k=4
-r_base_pred <- gam(prod_anom~s(area, k=k) + s(pa_ratio, k=k)+s(adjust_mean_elev, k=k)+ s(mean_slope, k=k)+skua50, select=TRUE, data=filter(pred_dat,col=="royds"), method="ML")
+r_pred_dat <- filter(pred_dat,col=="royds")%>%
+  mutate(skua50=as.numeric(skua50))
+r_base_pred <- gam(prod_anom~s(area, k=k) + s(pa_ratio, k=k)+s(adjust_mean_elev, k=k)+ s(mean_slope, k=k)+skua50, select=TRUE, data=r_pred_dat, method="ML")
 plot(r_base_pred,pages=1)
 r_pred_anom <- predict(royds_stack,r_base_pred, type="response")
 
@@ -1016,7 +1077,7 @@ plot(r_pred_anom, col=rev(rainbow(50, start = 0, end = 0.8, alpha = 1)),main="Pr
 hist(r_pred_anom)
 mean(r_pred_anom@data@values, na.rm=TRUE)
 sd(r_pred_anom@data@values, na.rm=TRUE)/sqrt(sum(!is.na(r_pred_anom@data@values)))
-writeRaster(r_pred_anom, "Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/rev2/royds_predict_subcol.tif", format="GTiff", overwrite=FALSE)
+writeRaster(r_pred_anom, "Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/rev2/royds_predict_subcol.tif", format="GTiff", overwrite=TRUE)
 
 # # calculated mean BS for last 4 years
 # r_bs4 <- r_dat%>%
@@ -1104,5 +1165,505 @@ subcol%>%
 
 ```
 
+Covariate maps 
+```{r Covariate maps (fig 5)}
+library(sp)
+library(ggplot2)
+require(dplyr)
+require(gridExtra)
+library(raster)
+library(viridis)
+library(rgdal)
+library(ggsn)
+library(imager)
+library(rasterVis)
+library(RStoolbox)
+# require(ggExtra)
+
+# Make figure for Crozier ####
+# Read in and format Crozier data
+# crozier boundary
+croz_bound <- readOGR("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_outer_bound.shp")
+
+proj <-"+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+croz_bound_t <- spTransform(croz_bound,proj)
+c_ext <- extent(croz_bound_t)+0.0002
+
+# aspect
+c_aspect <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/rev2/croz_aspect_corrected180.tif")
+c_aspect_t <- crop(projectRaster(c_aspect, crs=proj),c_ext)
+c_aspect_spdf <- as(c_aspect_t, "SpatialPixelsDataFrame")
+c_aspect_df <- as.data.frame(c_aspect_spdf)%>%
+  rename(value=croz_aspect_corrected180)%>%
+  mutate(value=ifelse(value<(-180),NA,value))
+
+# slope
+c_slope <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_slope.tif")
+c_slope_t <- crop(projectRaster(c_slope, crs=proj),c_ext)
+c_slope_df <- as.data.frame(as(c_slope_t, "SpatialPixelsDataFrame"))%>%
+  rename(value=croz_slope)%>%
+  mutate(value=ifelse(value<0,NA,value))
+
+# elevation
+c_elev <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_dem_clip_windshelter_grid.asc")+47
+c_elev_t <- crop(projectRaster(c_elev, crs=proj),c_ext)
+c_elev_df <- as.data.frame(as(c_elev_t, "SpatialPixelsDataFrame"))%>%
+  rename(value=croz_dem_clip_windshelter_grid)%>%
+  mutate(value=ifelse(value<0,NA,value))
+
+# flow accumulation
+c_flow <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_flowacc_snow_v2.tif")
+c_flow_t <- crop(projectRaster(c_flow, crs=proj),c_ext)
+c_flow_df <- as.data.frame(as(c_flow_t, "SpatialPixelsDataFrame"))%>%
+  rename(value=croz_flowacc_snow_v2)%>%
+  mutate(value=ifelse(value<0,NA,value),value=log1p(value))
+
+# Wind shelter
+c_wind <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/rev2/croz_windshelter300m_pi_pi8_lcc169.asc")
+c_wind_t <- crop(projectRaster(c_wind, crs=proj),c_ext)
+c_wind_df <- as.data.frame(as(c_wind_t, "SpatialPixelsDataFrame"))%>%
+  rename(value=croz_windshelter300m_pi_pi8_lcc169)%>%
+  mutate(value=ifelse(value<0,NA,value))
+
+# Skua
+c_skua <-raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/skua50m_dist_rast_bin.tif")
+c_skua_ext <- c_ext
+c_skua_t <- crop(projectRaster(c_skua, crs=proj),c_skua_ext)
+c_skua_df <- as.data.frame(as(c_skua_t, "SpatialPixelsDataFrame"))%>%
+  rename(value= skua50m_dist_rast_bin)%>%
+  mutate(value=ifelse(is.na(value),0,value))
+
+
+
+# make Crozier plots ###
+## colors 
+# col.p <- c("#035aa1","#72ABD0","white","#FDBF71","#d40404") # 
+col.p <- c("#006C84","#5EA8A7","#B2DBD5","white")
+
+# col.p <- c("#205682","#72ABD0","white","#FDBF71","#F94943")
+
+p.c_aspect<- ggplot() +  
+  geom_raster(data=c_aspect_df, aes(x=x, y=y, fill=value), alpha=0.8)+
+  geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
+  fill=NA, col="white",size=1) +
+  scale_fill_gradientn(colors=col.p,limits =c(-180,180), "Aspect (°)") +
+  theme(legend.position=c("right")) +
+  # theme(legend.key.width=unit(0.5, "cm"), legend.key.height = unit(2,"cm"))+
+  theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
+  labs(x="",y="")+
+  theme(legend.position = c(0.93, 0.91),
+        legend.justification = c("right", "top"),
+        legend.background = element_rect(fill = "grey50"),
+        legend.text = element_text(colour="white"),
+        legend.title = element_text(colour="white"),
+        axis.text=element_blank(),
+        axis.ticks = element_blank())
+# plot(p.c_aspect)
+
+
+p.c_slope<- ggplot() +  
+  geom_raster(data=c_slope_df, aes(x=x, y=y, fill=value), alpha=0.8)+
+  geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
+               fill=NA, col="white",size=1) +
+  scale_fill_gradientn(colors=col.p,limits =c(0,30), "Slope (°)") +
+  theme(legend.position="right") +
+  # theme(legend.key.width=unit(1, "cm"))+
+  theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
+  labs(x="",y="")+
+  theme(legend.position = c(0.93, 0.91),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(fill = "grey50"),
+        legend.text = element_text(colour="white"),
+        legend.title = element_text(colour="white"),
+        axis.text=element_blank(),
+        axis.ticks = element_blank())
+# plot(p.c_slope)
+
+
+p.c_elev<- ggplot() +  
+  geom_raster(data=c_elev_df, aes(x=x, y=y, fill=value))+
+  geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
+               fill=NA, col="white",size=1) +
+  scale_fill_gradientn(colors=col.p,limits =c(0,225), "Elevation (m)") +
+  theme(legend.position="right") +
+  # theme(legend.key.width=unit(1, "cm"))+
+  theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
+  labs(x="",y="")+
+  theme(legend.position = c(0.93, 0.91),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(fill = "grey50"),
+        legend.text = element_text(colour="white"),
+        legend.title = element_text(colour="white"), axis.text=element_blank(),
+        axis.ticks = element_blank())
+# plot(p.elev)
+
+
+p.c_flow<- ggplot() +  
+  geom_raster(data=c_flow_df, aes(x=x, y=y, fill=value))+
+  geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
+               fill=NA, col="white",size=1) +
+  scale_fill_gradientn(colors=col.p,limits =c(0,12), "Flow (log)") +
+  theme(legend.position="right") +
+  # theme(legend.key.width=unit(1, "cm"))+
+  theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
+  labs(x="",y="")+
+  theme(legend.position = c(0.93, 0.91),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(fill = "grey50"),
+        legend.text = element_text(colour="white"),
+        legend.title = element_text(colour="white"),
+        axis.text=element_blank(),
+        axis.ticks = element_blank())
+# plot(p.flow)
+
+p.c_wind<- ggplot() +  
+  geom_raster(data=c_wind_df, aes(x=x, y=y, fill=value))+
+  geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
+               fill=NA, col="white",size=1) +
+  scale_fill_gradientn(colors=col.p,limits =c(0,0.75),"Wind shelt.\nIndex") +
+  theme(legend.position="right") +
+  # theme(legend.key.width=unit(1, "cm"))+
+  theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
+  labs(x="",y="")+
+  theme(legend.position = c(0.93, 0.91),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(fill = "grey50"),
+        legend.text = element_text(colour="white"),
+        legend.title = element_text(colour="white"),
+        axis.text=element_blank(),
+        axis.ticks = element_blank())
+# plot(p.wind)
+
+
+p.c_skua<- ggplot() +  
+  geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
+               fill=NA, col="white",size=1)+
+  geom_tile(data=c_skua_df, aes(x=x, y=y, fill=value))+
+  # scale_fill_manual(col.p[1]) +
+  theme(legend.position="right") +
+  # theme(legend.key.width=unit(1, "cm"))
+  theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
+  labs(x="",y="", fill="Skua nests")+
+  theme(legend.position = c(0.93, 0.91),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(fill = "grey50"),
+        legend.text = element_text(colour="white"),
+        legend.title = element_text(colour="white"),
+        axis.text=element_blank(),
+        axis.ticks = element_blank())
+plot(p.c_skua)
+
+# croz Predicted subcol quality ####
+# satellite image
+# croz_WV3 <- raster("V:/Project/Terrestrial/adpe/sat_images/2016jul21_croz_2014_20m_pansharpened/WV03_2014.tif")
+croz_WV3 <- stack("V:/Project/Terrestrial/adpe/sat_images/2016jul21_croz_2014_20m_pansharpened/WV03_2014.tif")
+wv_ext <- extent(elev)
+croz_WV3_c <- crop(croz_WV3,crs=proj,wv_ext)
+croz_WV3_t <- crop(projectRaster(croz_WV3_c,crs=proj),ext)
+# croz_WV3_df <- as.data.frame(as(croz_WV3_t, "SpatialPixelsDataFrame"))
+
+# Predicted subcol quality raster
+c_subcol_qual <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/rev2/croz_predict_subcol.tif")
+c_subcol_t <- crop(projectRaster(c_subcol_qual, crs=proj),ext)
+c_subcol_df <- as.data.frame(as(c_subcol_t, "SpatialPixelsDataFrame"))%>%
+  rename(value= croz_predict_subcol)
+
+# Skua nests
+c_skua_nest<- read.csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/croz_skua_nests_1617.txt")%>%
+  filter(lat<(-77.448))
+# snow fields
+# snow <-  readOGR("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_2014_snowfields.shp")
+# snow_t <- crop(spTransform(snow, proj),ext)
+
+# Turqoise to orange
+col.subcol <- c("#006C84","#B2DBD5","#e6ceb5","#ff8324","#f73c2f")
+
+p.c_subcol<-  ggplot() +
+  ggRGB(croz_WV3_t,r=1,g=2,b=3,ggLayer=TRUE, maxpixels = 5e6)+
+  geom_tile(data=c_skua_df, aes(x=x, y=y, fill=value), fill="white",alpha=0.3)+
+  geom_tile(data=c_subcol_df, aes(x=x, y=y, fill=value))+
+  # geom_polygon(data=snow_t,aes(x=long, y=lat, group=group, fill="Snow"), colour  = 'black',fill=NA,size=0.75)+
+  geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
+               fill=NA, col="white",size=1)+
+  scale_fill_gradientn(colors=col.subcol,limits =c(-0.11,0.15),"Subcolony\n quality")+
+  geom_point(data=c_skua_nest,aes(x=lon,y=lat, color="#ffdd00"), size=3)+
+  scale_color_identity(name = "Skua nests",labels="",guide="legend")+
+  labs(x="Longitude",y="Latitude")+
+  theme(legend.key.size = unit(1, "cm"),
+    legend.position = c(0.93, 0.97),
+    legend.justification = c(1, 1),
+    legend.background = element_rect(fill = "grey50"),
+    legend.text = element_text(colour="white"),
+    legend.title = element_text(colour="white"),
+    # legend.box.background = element_rect(fill="grey50"),
+    legend.key=element_rect(fill="grey"),
+    axis.title=element_text(size=14),
+    axis.text=element_text(size=12))+
+    scale_x_continuous(expand=c(0.0003,0.0005))+
+    scale_y_continuous(expand=c(0.0001,0.0001))
+
+
+plot(p.c_subcol)
+
+
+### put everything together
+cairo_pdf(file=paste("croz_covariate_map_fig", format(Sys.time(), "%Y-%m-%d"), "pdf", sep = "."),width=12,height=12)
+
+grid.arrange(p.c_aspect,p.c_slope,p.c_elev,p.c_flow,p.c_wind,p.c_subcol,
+             ncol = 3, nrow = 4, 
+             layout_matrix = rbind(c(1,2,3), c(4,6,6),c(5,6,6)))
+dev.off()
+
+
+jpeg(file=paste("croz_covariates", "jpeg", sep = "."),units="in",width=11.5,height=14, res=300)
+grid.arrange(p.c_aspect,p.c_slope,p.c_elev,p.c_flow,p.c_wind,p.c_subcol,
+             ncol = 3, nrow = 4, 
+             layout_matrix = rbind(c(1,2,3), c(4,6,6),c(5,6,6)))
+dev.off()
+
+
+# Royds Figure ####
+# Read in and format Royds data ###
+# Royds boundary
+royds_bound <- readOGR("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_outer_bound_rev2.shp")
+# set projection
+proj <-"+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+royds_bound_t <- spTransform(royds_bound,proj)
+# save extent to use for other layers
+r_ext <- extent(royds_bound_t)+0.001
+
+
+# aspect
+r_aspect <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/rev2/royds_aspect_corrected180.tif")
+r_aspect_t <- crop(projectRaster(r_aspect, crs=proj),r_ext)
+r_aspect_spdf <- as(r_aspect_t, "SpatialPixelsDataFrame")
+r_aspect_df <- as.data.frame(r_aspect_spdf)%>%
+  rename(value=royds_aspect_corrected180)%>%
+  mutate(value=ifelse(value<(-180),NA,value))
+
+# slope
+r_slope <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/rev2/royds_slope.tif")
+r_slope_t <- crop(projectRaster(r_slope, crs=proj),r_ext)
+r_slope_df <- as.data.frame(as(r_slope_t, "SpatialPixelsDataFrame"))%>%
+  rename(value=royds_slope)%>%
+  mutate(value=ifelse(value<0,NA,value))
+
+# elevation
+r_elev <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/layers/royds_mosaic_dem-tile-0_clip.tif")+46
+r_elev_t <- crop(projectRaster(r_elev, crs=proj),r_ext)
+r_elev_df <- as.data.frame(as(r_elev_t, "SpatialPixelsDataFrame"))%>%
+  rename(value=royds_mosaic_dem.tile.0_clip)%>%
+  mutate(value=ifelse(value<0,0,value))
+
+# flow accumulation
+r_flow <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/rev2/royds_flow_acc_snow_rev2.tif")
+r_flow_t <- crop(projectRaster(r_flow, crs=proj),r_ext)
+r_flow_df <- as.data.frame(as(r_flow_t, "SpatialPixelsDataFrame"))%>%
+  rename(value=royds_flow_acc_snow_rev2)%>%
+  mutate(value=ifelse(value<0,NA,value),value=log1p(value))
+
+# Windshelter
+r_wind <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/rev2/royds_windshelter300m_pi_pi8_lcc169_clip.tif")
+r_wind_t <- crop(projectRaster(r_wind, crs=proj),r_ext)
+r_wind_df <- as.data.frame(as(r_wind_t, "SpatialPixelsDataFrame"))%>%
+  rename(value=royds_windshelter300m_pi_pi8_lcc169_clip)%>%
+  mutate(value=ifelse(value<0,0,value))
+
+# Skua
+r_skua <-raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/rev2/royds_skua_50m_bin.tif")
+r_skua_ext <- extent(r_skua)
+r_skua_t <- crop(projectRaster(r_skua, crs=proj),r_ext)
+r_skua_df <- as.data.frame(as(r_skua_t, "SpatialPixelsDataFrame"))%>%
+  rename(value= royds_skua_50m_bin)
+
+
+# Make Royds plots ###
+## colors 
+# col.p <- c("#035aa1","#72ABD0","white","#FDBF71","#d40404") # 
+col.p <- c("#006C84","#5EA8A7","#B2DBD5","white")
+
+# col.p <- c("#205682","#72ABD0","white","#FDBF71","#F94943")
+
+p.r_aspect<- ggplot() +  
+  geom_raster(data=r_aspect_df, aes(x=x, y=y, fill=value), alpha=0.8)+
+  geom_polygon(data=royds_bound_t, aes(x=long, y=lat, group=group),
+               fill=NA, col="white",size=1)+
+  scale_fill_gradientn(colors=col.p,limits =c(-180,180), "Aspect (°)") +
+  theme(legend.position=c("right")) +
+  # theme(legend.key.width=unit(0.5, "cm"), legend.key.height = unit(2,"cm"))+
+  theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
+  labs(x="",y="")+
+  theme(legend.position = c(0.93, 0.91),
+        legend.justification = c("right", "top"),
+        legend.background = element_rect(fill = "grey50"),
+        legend.text = element_text(colour="white"),
+        legend.title = element_text(colour="white"),
+        axis.text=element_blank(),
+        axis.ticks = element_blank())
+plot(p.r_aspect)
+
+
+p.r_slope<- ggplot() +  
+  geom_raster(data=r_slope_df, aes(x=x, y=y, fill=value), alpha=0.8)+
+  geom_polygon(data=royds_bound_t, aes(x=long, y=lat, group=group),
+               fill=NA, col="white",size=1) +
+  scale_fill_gradientn(colors=col.p,limits =c(0,60), "Slope (°)") +
+  theme(legend.position="right") +
+  # theme(legend.key.width=unit(1, "cm"))+
+  theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
+  labs(x="",y="")+
+  theme(legend.position = c(0.93, 0.91),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(fill = "grey50"),
+        legend.text = element_text(colour="white"),
+        legend.title = element_text(colour="white"),
+        axis.text=element_blank(),
+        axis.ticks = element_blank())
+plot(p.r_slope)
+
+
+p.r_elev<- ggplot() +  
+  geom_raster(data=r_elev_df, aes(x=x, y=y, fill=value))+
+  geom_polygon(data=royds_bound_t, aes(x=long, y=lat, group=group),
+               fill=NA, col="white",size=1) +
+  scale_fill_gradientn(colors=col.p,limits =c(0,25), "Elevation (m)") +
+  theme(legend.position="right") +
+  # theme(legend.key.width=unit(1, "cm"))+
+  theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
+  labs(x="",y="")+
+  theme(legend.position = c(0.93, 0.91),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(fill = "grey50"),
+        legend.text = element_text(colour="white"),
+        legend.title = element_text(colour="white"), axis.text=element_blank(),
+        axis.ticks = element_blank())
+plot(p.r_elev)
+
+
+p.r_flow<- ggplot() +  
+  geom_raster(data=r_flow_df, aes(x=x, y=y, fill=value))+
+  geom_polygon(data=royds_bound_t, aes(x=long, y=lat, group=group),
+               fill=NA, col="white",size=1) +
+  scale_fill_gradientn(colors=col.p,limits =c(0,7), "Flow (log)") +
+  theme(legend.position="right") +
+  # theme(legend.key.width=unit(1, "cm"))+
+  theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
+  labs(x="",y="")+
+  theme(legend.position = c(0.93, 0.91),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(fill = "grey50"),
+        legend.text = element_text(colour="white"),
+        legend.title = element_text(colour="white"),
+        axis.text=element_blank(),
+        axis.ticks = element_blank())
+plot(p.r_flow)
+
+p.r_wind<- ggplot() +  
+  geom_raster(data=r_wind_df, aes(x=x, y=y, fill=value))+
+  geom_polygon(data=royds_bound_t, aes(x=long, y=lat, group=group),
+               fill=NA, col="white",size=1) +
+  scale_fill_gradientn(colors=col.p,limits =c(0,1.1),"Wind shelt.\nIndex") +
+  theme(legend.position="right") +
+  # theme(legend.key.width=unit(1, "cm"))+
+  theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
+  labs(x="",y="")+
+  theme(legend.position = c(0.93, 0.91),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(fill = "grey50"),
+        legend.text = element_text(colour="white"),
+        legend.title = element_text(colour="white"),
+        axis.text=element_blank(),
+        axis.ticks = element_blank())
+plot(p.r_wind)
+
+
+p.r_skua<- ggplot() +  
+  geom_polygon(data=royds_bound_t, aes(x=long, y=lat, group=group),
+               fill=NA, col="white",size=1)+
+  geom_tile(data=r_skua_df, aes(x=x, y=y, fill=value))+
+  # scale_fill_manual(col.p[1]) +
+  theme(legend.position="right") +
+  # theme(legend.key.width=unit(1, "cm"))
+  theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
+  labs(x="",y="", fill="Skua nests")+
+  theme(legend.position = c(0.93, 0.91),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(fill = "grey50"),
+        legend.text = element_text(colour="white"),
+        legend.title = element_text(colour="white"),
+        axis.text=element_blank(),
+        axis.ticks = element_blank())
+plot(p.r_skua)
+
+# Royds Predicted subcol quality ####
+# satellite image
+royds_WV2 <- stack("V:/Project/Terrestrial/adpe/sat_images/2016jul06_RI penguin colonies pansharpened/imagery/pansharpened/w2_15.tif") # needs to be a stack to use ggRGB
+rwv_ext <- extent(r_aspect)
+royds_WV2_c <- crop(royds_WV2,crs=proj,rwv_ext)
+royds_WV2_t <- crop(projectRaster(royds_WV2_c,crs=proj),r_ext)
+# croz_WV3_df <- as.data.frame(as(croz_WV3_t, "SpatialPixelsDataFrame"))
+
+# Predicted subcol quality raster
+r_subcol_qual <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/royds/rev2/royds_predict_subcol.tif")
+r_subcol_t <- crop(projectRaster(r_subcol_qual, crs=proj),r_ext)
+r_subcol_df <- as.data.frame(as(r_subcol_t, "SpatialPixelsDataFrame"))%>%
+  rename(value= royds_predict_subcol)
+
+# Skua nests
+r_skua_nest<- read.csv("Z:/Informatics/S031/analyses/aschmidt/subcol_var/data/royds_skua_nests_1617.csv")%>%
+  filter(Lat!=0)
+# # snow fields
+# snow <-  readOGR("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_2014_snowfields.shp")
+# snow_t <- crop(spTransform(snow, proj),ext)
+
+# Turqoise to orange
+col.subcol <- c("#006C84","#B2DBD5","#e6ceb5","#ff8324","#f73c2f")
+
+p.r_subcol<-  ggplot() +
+  ggRGB(royds_WV2_t,r=1,g=2,b=3,ggLayer=TRUE, maxpixels = 5e6)+
+  # ggRGB(royds_WV2_s)
+  geom_tile(data=r_skua_df, aes(x=x, y=y, fill=value), fill="white",alpha=0.15)+
+  geom_tile(data=r_subcol_df, aes(x=x, y=y, fill=value))+
+  # geom_polygon(data=snow_t,aes(x=long, y=lat, group=group, fill="Snow"), colour  = 'black',fill=NA,size=0.75)+
+  geom_polygon(data=royds_bound_t, aes(x=long, y=lat, group=group),
+               fill=NA, col="white",size=1)+
+  scale_fill_gradientn(colors=col.subcol,limits =c(-0.7,0.65),"Subcolony\n quality")+
+  geom_point(data=r_skua_nest,aes(x=Lon,y=Lat, color="#ffdd00"), size=3)+
+  scale_color_identity(name = "Skua nests",labels="",guide="legend")+
+  labs(x="Longitude",y="Latitude")+
+  theme(legend.key.size = unit(1, "cm"),
+        legend.position = c(0.93, 0.97),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(fill = "grey50"),
+        legend.text = element_text(colour="white"),
+        legend.title = element_text(colour="white"),
+        # legend.box.background = element_rect(fill="grey50"),
+        legend.key=element_rect(fill="grey"),
+        axis.title=element_text(size=14),
+        axis.text=element_text(size=12))+
+  scale_x_continuous(expand=c(0.0003,0.0005))+
+  scale_y_continuous(expand=c(0.0001,0.0001))
+
+
+plot(p.r_subcol)
+
+
+### put everything together
+cairo_pdf(file=paste("royds_covariate_map_fig", format(Sys.time(), "%Y-%m-%d"), "pdf", sep = "."),width=12,height=12)
+
+grid.arrange(p.r_aspect,p.r_slope,p.r_elev,p.r_flow,p.r_wind,p.r_subcol,
+             ncol = 3, nrow = 4, 
+             layout_matrix = rbind(c(1,2,3), c(4,6,6),c(5,6,6)))
+dev.off()
+
+
+jpeg(file=paste("royds_covariates", "jpeg", sep = "."),units="in",width=12,height=14, res=300)
+grid.arrange(p.r_aspect,p.r_slope,p.r_elev,p.r_flow,p.r_wind,p.r_subcol,
+             ncol = 3, nrow = 4, 
+             layout_matrix = rbind(c(1,2,3), c(4,6,6),c(5,6,6)))
+dev.off()
+
+
+```
 
 

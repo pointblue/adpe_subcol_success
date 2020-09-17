@@ -52,10 +52,10 @@ flow_df <- as.data.frame(as(flow_t, "SpatialPixelsDataFrame"))%>%
   mutate(value=ifelse(value<0,NA,value),value=log1p(value))
 
 # Windshelter
-wind <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_windshelter_300m_2pi_v2.asc")
+wind <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/rev2/croz_windshelter300m_pi_pi8_lcc169.asc")
 wind_t <- crop(projectRaster(wind, crs=proj),ext)
 wind_df <- as.data.frame(as(wind_t, "SpatialPixelsDataFrame"))%>%
-  rename(value=croz_windshelter_300m_2pi_v2)%>%
+  rename(value=croz_windshelter300m_pi_pi8_lcc169)%>%
   mutate(value=ifelse(value<0,NA,value))
 
 # Skua
@@ -110,7 +110,7 @@ p.c_slope<- ggplot() +
         legend.title = element_text(colour="white"),
         axis.text=element_blank(),
         axis.ticks = element_blank())
-# plot(p.c_slope)
+plot(p.c_slope)
 
 
 p.elev<- ggplot() +  
@@ -128,7 +128,7 @@ p.elev<- ggplot() +
         legend.text = element_text(colour="white"),
         legend.title = element_text(colour="white"), axis.text=element_blank(),
         axis.ticks = element_blank())
-# plot(p.elev)
+plot(p.elev)
 
 
 p.flow<- ggplot() +  
@@ -147,13 +147,13 @@ p.flow<- ggplot() +
         legend.title = element_text(colour="white"),
         axis.text=element_blank(),
         axis.ticks = element_blank())
-# plot(p.flow)
+plot(p.flow)
 
 p.wind<- ggplot() +  
   geom_raster(data=wind_df, aes(x=x, y=y, fill=value))+
   geom_polygon(data=croz_bound_t, aes(x=long, y=lat, group=group),
                fill=NA, col="white",size=1) +
-  scale_fill_gradientn(colors=col.p,limits =c(0,0.75),"Shelt. Index") +
+  scale_fill_gradientn(colors=col.p,limits =c(0,0.75),"Wind shelt.\nIndex") +
   theme(legend.position="right") +
   # theme(legend.key.width=unit(1, "cm"))+
   theme(legend.key.width = unit(0.2, "cm"), legend.key.height = unit(0.35, "cm"))+
@@ -165,7 +165,7 @@ p.wind<- ggplot() +
         legend.title = element_text(colour="white"),
         axis.text=element_blank(),
         axis.ticks = element_blank())
-# plot(p.wind)
+plot(p.wind)
 
 
 p.skua<- ggplot() +  
@@ -196,7 +196,7 @@ croz_WV3_t <- crop(projectRaster(croz_WV3_c,crs=proj),ext)
 # croz_WV3_df <- as.data.frame(as(croz_WV3_t, "SpatialPixelsDataFrame"))
 
 # Predicted subcol quality raster
-subcol_qual <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/layers/croz_predict_subcol.tif")
+subcol_qual <- raster("Z:/Informatics/S031/analyses/aschmidt/subcol_var/GIS/croz/rev2/croz_predict_subcol.tif")
 subcol_t <- crop(projectRaster(subcol_qual, crs=proj),ext)
 subcol_df <- as.data.frame(as(subcol_t, "SpatialPixelsDataFrame"))%>%
   rename(value= croz_predict_subcol)
