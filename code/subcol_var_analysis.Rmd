@@ -453,6 +453,19 @@ c_base_anom <-gam(prod_anom~s(area, k=ck)+
 # #skua p >0.1 checking if affects model ranking if remove [no]
 # c_base_skua <- gam(prod_anom~s(area, k=ck)+s(pa_ratio, k=ck)+s(mean_slope, k=ck)+s(mean_aspect,k=ck, bs="cc") +s(adjust_mean_elev,k=ck)+s(flow_acc_log1p,k=ck)+ s(mean_windshelt,k=ck), data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
 
+# fit same model with random effect
+# c_base_anom_re <-gam(prod_anom~s(area, k=ck)+
+#                     s(pa_ratio, k=ck)+
+#                     s(mean_slope, k=ck)+
+#                     s(mean_aspect,k=ck, bs="cc") +
+#                     s(adjust_mean_elev,k=ck)+
+#                     s(flow_acc_log1p,k=ck)+ 
+#                     s(mean_windshelt,k=ck)+
+#                     skua50+
+#                     s(subcol, bs="re"),
+#                   data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
+
+
 
 # check if basis dimensions sufficient
 par(mfrow=c(2,2))
@@ -485,6 +498,17 @@ plot.gam(c_seasonx_anom, shade=TRUE)
 
 #skua p >0.1 checking if affects model ranking if remove [no]
 # c_seasonx_anom_re <-gam(prod_anom~s(area, by=season, k=ck) + s(pa_ratio, by=season, k=ck)+s(mean_slope, by=season, k=ck)+s(mean_aspect,by=season,k=ck, bs="cc")+s(adjust_mean_elev,by=season, k=ck)+  +s(flow_acc_log1p,by=season,k=ck)+s(mean_windshelt,by=season,k=ck), data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
+# 
+# c_seasonx_anom_re <-gam(prod_anom~s(area, k=ck) + 
+#                        s(pa_ratio, k=ck)+
+#                        s(mean_slope, by=season, k=ck)+
+#                        s(mean_aspect,by=season,k=ck, bs="cc")+
+#                        s(adjust_mean_elev,by=season, k=ck)+
+#                        s(flow_acc_log1p,by=season,k=ck)+
+#                        s(mean_windshelt,by=season,k=ck)+
+#                        skua50*season+
+#                        s(subcol, bs="re"), 
+#                      data=filter(ann_prod_anom,col=="croz"), select=TRUE, method="ML")
 
 
 # check how compare
@@ -502,7 +526,6 @@ rk=4
 # create table to use in models
 r_mdat <-filter(ann_prod_anom,col=="royds")
 
-
 # flow at Royds has non-zero estimates at only 2 subcolonies (1c and 20a), doesn't seem like a good idea to include
 # Fit model with no interactions
 
@@ -511,16 +534,51 @@ r_mdat <-filter(ann_prod_anom,col=="royds")
 # so running models with each independently
 
 # model with wind but not aspect
-r_base_wind <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_windshelt,k=rk)+skua50, data=r_mdat, select=TRUE, method="ML")
+r_base_wind <-
+  gam(prod ~ s(area, k = rk) + 
+      s(pa_ratio, k = rk) + 
+      s(adjust_mean_elev, k =rk) + 
+      s(mean_slope, k = rk) + 
+      s(mean_windshelt, k = rk) + 
+      skua50,
+    data = r_mdat,
+    select = TRUE,
+    method = "REML"
+  )
 gam.check(r_base_wind)
 summary(r_base_wind)
 .plot.gam(r_base_wind, pages=1, shade=T, residuals=T)
+
+# # refit with random effect
+# r_base_wind_re <-
+#   gam(prod_anom ~ s(area, k = rk) + 
+#       s(pa_ratio, k = rk) + 
+#       s(adjust_mean_elev, k =rk) + 
+#       s(mean_slope, k = rk) + 
+#       s(mean_windshelt, k = rk) + 
+#       skua50+
+#       s(subcol,bs="re"),
+#     data = r_mdat,
+#     select = TRUE,
+#     method = "REML"
+#   )
 
 #skua p >0.1 checking if affects model ranking if remove [no]
 # r_base_wind_re <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_windshelt,k=rk), data=r_mdat, select=TRUE, method="ML")
 
 # model with no windshelter but including aspect
-r_base_aspect <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc")+skua50, data=r_mdat, select=TRUE, method="ML")
+r_base_aspect <-
+  gam(
+    prod_anom ~ s(area, k = rk) + 
+      s(pa_ratio, k = rk) + 
+      s(adjust_mean_elev, k =rk) + 
+      s(mean_slope, k = rk) + 
+      s(mean_aspect, k = rk, bs = "cc") + 
+      skua50,
+    data = r_mdat,
+    select = TRUE,
+    method = "REML"
+  )
 gam.check(r_base_aspect) # k may be too low but don't want to increase because will likely overfit
 concurvity(r_base_aspect) # several estimates >0.8, pa-ratio and slope
 round(concurvity(r_base_aspect, full=FALSE)$estimate,2) # pa ratio highest, highest concurvity with area and elevation. not much variability in elevation so could remove. Highest concurvity is 0.58 so think I could justify that that is OK
@@ -528,8 +586,22 @@ summary(r_base_aspect)
 plot.gam(r_base_aspect, pages=1, shade=T, residuals=T)
 
 # #skua p >0.1 checking if affects model ranking if remove [no]
-r_base_aspect_re <- gam(prod_anom~s(area, k=rk) + s(pa_ratio, k=rk)+s(adjust_mean_elev, k=rk)+s(mean_slope,k=rk) +s(mean_aspect,k=rk, bs="cc"), data=r_mdat, select=TRUE, method="ML")
-summary(r_base_aspect_re)
+
+# # refit with random effct
+# r_base_aspect_re <-
+#   gam(
+#     prod_anom ~ s(area, k = rk) + 
+#       s(pa_ratio, k = rk) + 
+#       s(adjust_mean_elev, k =rk) + 
+#       s(mean_slope, k = rk) + 
+#       s(mean_aspect, k = rk, bs = "cc") + 
+#       skua50+
+#       s(subcol,bs="re"),
+#     data = r_mdat,
+#     select = TRUE,
+#     method = "REML"
+#   )
+
 # plot.gam(r_base_aspect_re)
 
 # model with year interaction
@@ -545,9 +617,17 @@ summary(r_seasonx)
 plot.gam(r_seasonx, pages=1)
 
 #skua p >0.1 checking if affects model ranking if remove [no]
-# r_seasonx_re<-  gam(prod_anom~s(area,by=season,k=rk) + s(pa_ratio, by=season,k=rk-1)+ s(adjust_mean_elev,by=season, k=rk)+s(mean_slope,by=season,k=rk)+s(mean_aspect,k=rk, bs="cc", by=season), data=r_mdat, select=TRUE, method="ML")
+# add random effect of subcol id
+# r_seasonx_re<-  gam(prod_anom~s(area,k=rk) + 
+#                    s(pa_ratio,k=rk)+ 
+#                    s(adjust_mean_elev,by=season, k=rk)+
+#                    s(mean_slope,by=season,k=rk)+
+#                    s(mean_aspect,k=rk, bs="cc", by=season)+
+#                    s(subcol,bs="re")+
+#                    skua50*season, data=r_mdat, select=TRUE, method="ML")
 
-AICctab(r_base_wind,r_base_aspect,r_seasonx,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
+
+AICctab(r_base_wind, r_base_aspect,r_seasonx,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
 
 # AICctab(r_base_wind_re,r_base_aspect_re,r_seasonx_re,nobs=86, base=TRUE, weights=TRUE, logLik=TRUE)
 
