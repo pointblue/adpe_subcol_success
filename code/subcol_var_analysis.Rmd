@@ -20,7 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r load libraries and data}
 
-list.of.packages <- c("tidyverse", "mgcv","Hmisc", "stringr","gridExtra","nlme", "raster","rgdal","sf","nngeo","bbmle")
+list.of.packages <- c("tidyverse", "mgcv","Hmisc", "stringr","gridExtra","nlme", "raster","rgdal","sf","nngeo","bbmle","circular")
 # # compare to existing packages
 # new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 # # install missing packages
@@ -125,7 +125,7 @@ subcol_attr <- all_dat%>%
   filter(!is.na(measurement))
 
 # label panels with significant difference
-attr_sig <- data.frame(attr=ordered(c("Area (m2)","Perim-Area ratio","Aspect (°)","Slope (°)","Flow accumulation (log)","Wind shelter index","Elevation (m)", "Skua 50m")), sig=as.character(c("*","*","*","","*","*","*","*")))
+attr_sig <- data.frame(attr=ordered(c("Area (m2)","Perim-Area ratio","Aspect (°)","Slope (°)","Flow accumulation (log)","Wind shelter index","Elevation (m)", "Skua 50m")), sig=as.character(c("*","*","*","*","*","*","*","*")))
 
 subcol_attr%>%
   group_by(subcol,attr)%>%
@@ -275,6 +275,9 @@ sd(pair_dat$`Perim-Area ratio`[pair_dat$col=="croz"])/sqrt(length(pair_dat$`Peri
 mean(pair_dat$`Perim-Area ratio`[pair_dat$col=="royds"])
 sd(pair_dat$`Perim-Area ratio`[pair_dat$col=="royds"])/sqrt(length(pair_dat$`Perim-Area ratio`[pair_dat$col=="royds"]))
 
+x <- pair_dat$`Aspect (°)`[pair_dat$col=="croz"]
+y <- pair_dat$`Aspect ()`[pair_dat$col=="royds"]
+watson.two.test(x,y)
 
 
 # Croz and Royds productivity together ####
@@ -543,7 +546,7 @@ r_base_wind <-
       skua50,
     data = r_mdat,
     select = TRUE,
-    method = "REML"
+    method = "ML"
   )
 gam.check(r_base_wind)
 summary(r_base_wind)
@@ -577,13 +580,14 @@ r_base_aspect <-
       skua50,
     data = r_mdat,
     select = TRUE,
-    method = "REML"
+    method = "ML"
   )
 gam.check(r_base_aspect) # k may be too low but don't want to increase because will likely overfit
 concurvity(r_base_aspect) # several estimates >0.8, pa-ratio and slope
 round(concurvity(r_base_aspect, full=FALSE)$estimate,2) # pa ratio highest, highest concurvity with area and elevation. not much variability in elevation so could remove. Highest concurvity is 0.58 so think I could justify that that is OK
 summary(r_base_aspect)
 plot.gam(r_base_aspect, pages=1, shade=T, residuals=T)
+
 
 # #skua p >0.1 checking if affects model ranking if remove [no]
 
@@ -749,30 +753,45 @@ r2_tab <- data.frame(term,cb_r2,rb_r2)%>%
 # 
 # # Or calculate R2 deviance?
 # # this is basically the percent deviance of the top model that can be explained by each covariate (??)
-# 
-# #Ref = null deviance
-# #Cov = model with single variate
-# #Ref t = top model
-# 
-# ref = deviance(gam(prod_anom~1,data=r_mdat,method="ML"))
-# reft = deviance(rb)
-# denom = ref-reft
-# 
-# mcov_area = gam(prod_anom~s(area,k=rk),sp=rb$sp[c(1,2)], method="ML", data = r_mdat)
-# plot.gam(mcov_area)
-#   deviance(gam(prod_anom~s(area,k=rk),sp=rb$sp[c(1,2)], method="ML", data = r_mdat))
-# 
-# r2dev_area <- (ref-cov_area)/(ref-reft)
-# 
-# mcov_pa <- gam(prod_anom~s(pa_ratio,k=rk),sp=rb$sp[c(3,4)], method="ML", data = r_mdat)
-# plot.gam(mcov_pa)  
-# 
-# deviance(gam(prod_anom~s(pa_ratio,k=rk),sp=rb$sp[c(3,4)], method="ML", data = r_mdat))
-# r2dev_pa <- (ref-cov_pa)/(ref-reft)
-# 
-# r_dev_slope <-deviance(gam(prod_anom~s(pa_ratio,k=rk),sp=rb$sp[c(7,8)], method="ML", data = r_mdat))
-# 
-# r2dev_slope <- (ref-r_dev_slope)/denom
+#Ref = null deviance
+#Cov = model with single variate
+#Ref t = top model
+
+r_ref = deviance(gam(prod_anom~1,data=r_mdat,method="ML"))
+r_reft = deviance(rb)
+r_denom = r_ref-r_reft
+
+# run models with each covariate
+r_area = gam(prod_anom~s(area,k=rk),sp=rb$sp[c(1,2)], method="REML", data = r_mdat)
+r_pa <- gam(prod_anom~s(pa_ratio,k=rk),sp=rb$sp[c(3,4)], method="REML", data = r_mdat)
+r_elev <- gam(prod_anom~s(adjust_mean_elev,k=rk),sp=rb$sp[c(5,6)], method="REML", data = r_mdat)
+r_slope <- gam(prod_anom~s(mean_slope,k=rk),sp=rb$sp[c(7,8)], method="REML", data = r_mdat)
+r_aspect <- gam(prod_anom~s(mean_aspect,k=rk),sp=rb$sp[9], method="REML", data = r_mdat)
+
+r_area = gam(prod_anom~s(area,k=rk),sp=rb$sp[c(1,2)], method="ML", data = r_mdat)
+r_pa <- gam(prod_anom~s(pa_ratio,k=rk),sp=rb$sp[c(3,4)], method="ML", data = r_mdat)
+r_elev <- gam(prod_anom~s(adjust_mean_elev,k=rk),sp=rb$sp[c(5,6)], method="ML", data = r_mdat)
+r_slope <- gam(prod_anom~s(mean_slope,k=rk),sp=rb$sp[c(7,8)], method="ML", data = r_mdat)
+r_aspect <- gam(prod_anom~s(mean_slope,k=rk),sp=rb$sp[9], method="ML", data = r_mdat)
+
+
+# calculate deviance of each covariate model
+r_area_dev <- deviance(r_area)
+r_pa_dev <- deviance(r_pa)
+r_elev_dev <- deviance(r_elev)
+r_slope_dev <- deviance(r_slope)
+r_aspect_dev <- deviance(r_aspect)
+
+# calculated r2 deviance
+r_r2dev_area <- (r_ref-r_area_dev)/r_denom
+r_r2dev_pa <- (r_ref-r_pa_dev)/r_denom
+r_r2dev_elev <- (r_ref-r_elev_dev)/r_denom
+r_r2dev_slope <- (r_ref-r_slope_dev)/r_denom
+r_r2dev_aspect <- (r_ref-r_aspect_dev)/r_denom
+
+r2dev_tab <-data.frame(term=c("area","par","elev","slope","aspect","wind","flood"),r_r2dev=c(r_r2dev_area,r_r2dev_pa,r_r2dev_elev,r_r2dev_slope,r_r2dev_aspect,NA,NA))
+
+
 
 ```
 
@@ -1791,8 +1810,8 @@ names(r_stack_v2)[6:8] <-c("mean_aspect","mean_windshelt","flow_acc_log1p")
 r_subcol_attr<- extract(r_stack_v2,r_subcol_t, fun=mean, na.rm=TRUE, df=TRUE) 
 
 # write subcol attribute table
-write.csv(c_subcol_attr, "data/croz_all_subcol_attr.csv", row.names = FALSE)
-write.csv(r_subcol_attr, "data/royd_all_subcol_attr.csv",row.names = FALSE)
+# write.csv(c_subcol_attr, "data/croz_all_subcol_attr.csv", row.names = FALSE)
+# write.csv(r_subcol_attr, "data/royd_all_subcol_attr.csv",row.names = FALSE)
 
 # read in data files created above
 c_all_subcol_attr <- read.csv("data/croz_all_subcol_attr.csv")%>%
@@ -1824,7 +1843,7 @@ c_attr <- c_all_subcol_attr%>%
 #format royds sample subcols
 r_samp_subcol_attr <- r_dat%>%
   dplyr::select(col,subcol,area,skua50,pa_ratio,mean_aspect:flow_acc_log1p,mean_slope,adjust_mean_elev,mean_windshelt)%>%
-  mutate(samp=1,skua50=as.numeric(skua50))%>%
+  mutate(samp=1,skua50=as.numeric(as.character(skua50)))%>%
   group_by(subcol)%>%
   dplyr::slice(1)
 
@@ -1876,14 +1895,13 @@ ggplot(aes(x=measurement,fill=samp))+
     # vjust = 1.5,size=12,inherit.aes = FALSE)
 # add stars for significant difference
 
+
+
 # Royds figure
-c_attr%>%
-  group_by(ID,col,attr)%>%
-  dplyr::slice(1)%>%
-ggplot(aes(x=measurement,fill=samp))+
+ggplot(r_attr,aes(x=measurement,fill=samp))+
   facet_wrap(~attr,scales="free",strip.position = "bottom")+
-  geom_density(data=subset(c_attr,attr%in%c("Area (m2)","Perim-Area ratio","Aspect (°)","Slope (°)","Flow accumulation (log)","Wind shelter index","Elevation (m)")),alpha = 0.7, color="white")+
-  geom_bar(data=subset(c_attr,attr=="Skua 50m"),bins=2,stat="bin",position=position_dodge(0.8),aes(y=..density..),color="white",alpha=0.7)+
+  geom_density(data=subset(r_attr,attr%in%c("Area (m2)","Perim-Area ratio","Aspect (°)","Slope (°)","Flow accumulation (log)","Wind shelter index","Elevation (m)")),alpha = 0.7, color="white")+
+  geom_bar(data=subset(r_attr,attr=="Skua 50m"),bins=2,stat="bin",position=position_dodge(0.8),aes(y=..density..),color="white",alpha=0.7)+
   ylab("Density")+
   xlab("")+
   scale_fill_manual(values=c(col1,col2),labels = c("All","Sample"))+
@@ -1897,6 +1915,99 @@ ggplot(aes(x=measurement,fill=samp))+
   guides(fill=guide_legend(title="Subcolonies"))+
     guides(fill=guide_legend(title="Subcolonies"),color=guide_legend(title="Subcolonies"))
   # geom_text(data=attr_sig,aes(label=sig),show.legend=FALSE, x=Inf,y=Inf,hjust = 3,
+
+
+
+# redo statistical tests between colonies
+pair_dat <-c_attr%>%
+  full_join(r_attr)%>%
+  # group_by(ID,col,attr)%>%
+  # dplyr::slice(1)%>%
+  # filter(!attr=="Skua 50m")%>%
+  spread(attr,measurement)%>%
+  mutate(`Aspect (°)`=ifelse(`Aspect (°)`>180,`Aspect (°)`-360,`Aspect (°)`))%>%
+  distinct()
+
+filter(pair_dat,col=="royds",samp==1)
+
+# Most variables not normal so used Mann-Whitney U test
+wilcox.test(pair_dat$`Elevation (m)`[pair_dat$col=="croz"],pair_dat$`Elevation (m)`[pair_dat$col=="royds"]) # 34020, p-value < 2.2e-16
+wilcox.test(pair_dat$`Area (m2)`[pair_dat$col=="croz"],pair_dat$`Area (m2)`[pair_dat$col=="royds"]) # W = 22372, p-value = 0.0007813
+wilcox.test(pair_dat$`Flow accumulation (log)`[pair_dat$col=="croz"],pair_dat$`Flow accumulation (log)`[pair_dat$col=="royds"])#W = 23626, p-value = 3.684e-06
+
+# croz max area
+max(pair_dat$`Area (m2)`[pair_dat$col=="croz"&pair_dat$samp==1])
+
+# test difference in aspect
+x<-as.circular(pair_dat$`Aspect (°)`[pair_dat$col=="croz"],units="degrees", rotation="clock")
+y <-as.circular(pair_dat$`Aspect (°)`[pair_dat$col=="royds"],units="degrees",rotation="clock")
+watson.two.test(x,y) #test statistic 1.67, critical values 0.187, p<0.001
+median(pair_dat$`Aspect (°)`[pair_dat$col=="croz"]) # 57.56574
+median(pair_dat$`Aspect (°)`[pair_dat$col=="royds"]) # 193.6522 ()
+#crozier mean aspect
+mean.circular(x) #60.07
+# royds mean aspect
+mean.circular(y) #-52.05617
+
+
+wilcox.test(pair_dat$`Slope (°)`[pair_dat$col=="croz"],pair_dat$`Slope (°)`[pair_dat$col=="royds"]) # W = 22244, p-value = 0.001062
+wilcox.test(pair_dat$`Wind shelter index`[pair_dat$col=="croz"],pair_dat$`Wind shelter index`[pair_dat$col=="royds"])#  W = 25560, p-value = 6.659e-09
+wilcox.test(pair_dat$`Perim-Area ratio`[pair_dat$col=="croz"],pair_dat$`Perim-Area ratio`[pair_dat$col=="royds"])# W = 11775, p-value = 0.0001899
+wilcox.test(pair_dat$`Skua 50m` [pair_dat$col=="croz"],pair_dat$`Skua 50m`[pair_dat$col=="royds"]) # W = 9694.5, p-value = 3.222e-11
+
+
+# Test if proportion of subcol with skuas near is different
+croz_skua<- sum(pair_dat$`Skua 50m`[pair_dat$col=="croz"])
+n_croz<-length(pair_dat$`Skua 50m`[pair_dat$col=="croz"])
+royds_skua <- sum(pair_dat$`Skua 50m`[pair_dat$col=="royds"])
+n_royds <- length(pair_dat$`Skua 50m`[pair_dat$col=="royds"])
+
+# Having trouble making the skua panel so doing it manually here
+# data frame with proportions and CI
+prop_skua <- data.frame(croz_skua,n_croz,prop_croz=croz_skua/n_croz,royds_skua,n_royds,prop_royds=royds_skua/n_royds)
+# Proportion margin of error
+#z*sqrt(p(1-p)/n)
+prop_skua$croz_CI <- 1.96*sqrt((prop_skua$prop_croz*(1-prop_skua$prop_croz))/n_croz)
+prop_skua$royds_CI <- 1.96*sqrt((prop_skua$prop_royds*(1-prop_skua$prop_royds))/n_royds)
+
+# test if difference in proportion is significant
+prop.test(x=c(croz_skua,royds_skua),n=c(n_croz,n_royds))
+# 
+# 	2-sample test for equality of proportions with continuity correction
+# 
+# data:  c(croz_skua, royds_skua) out of c(n_croz, n_royds)
+# X-squared = 33.56, df = 1, p-value = 6.91e-09
+# alternative hypothesis: two.sided
+# 95 percent confidence interval:
+#  -0.5790502 -0.2618903
+# sample estimates:
+#    prop 1    prop 2 
+# 0.2461964 0.6666667 
+
+
+# Figure with croz and royds together
+dat <- pair_dat%>%
+  filter(`Area (m2)`<1500)%>%
+  gather(attr,value=measurement,-ID, -samp,-col)%>%
+  mutate(attr=ordered(attr,levels=c("Area (m2)","Perim-Area ratio","Aspect (°)","Slope (°)","Flow accumulation (log)","Wind shelter index","Elevation (m)", "Skua 50m")))
+
+
+ggplot(dat,aes(x=measurement, fill=col,color=col))+
+ facet_wrap(~attr,scales="free",strip.position = "bottom")+
+  geom_density(data=subset(dat,attr%in%c("Area (m2)","Perim-Area ratio","Aspect (°)","Slope (°)","Flow accumulation (log)","Wind shelter index","Elevation (m)")),alpha = 0.7, color="white")+
+  geom_bar(data=subset(dat,attr=="Skua 50m"),bins=2,stat="bin",position=position_dodge(0.8),aes(y=..density..),color="white",alpha=0.7)+
+  ylab("Density")+
+  xlab("")+
+  scale_fill_manual(values=c(col1,col2),labels = c("Crozier","Royds"))+
+  theme_classic()+
+  theme(strip.placement = "outside",
+        # strip.placement.y="outside",
+    strip.background = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank(), panel.border=element_blank(),axis.line= element_line(colour = "black"),panel.spacing = unit(1.5, "lines"),
+    strip.text=element_text(size=11), axis.text=element_text(size=9),
+    plot.margin=margin(t = 10, r = 2, b = 0, l = 0, unit = "pt"),
+    legend.position="right")+
+  guides(fill=guide_legend(title="Colony"))
+
 
 
 ```
