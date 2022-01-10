@@ -80,10 +80,6 @@ c_aspect_corr_rast@data@min<- 0
 subcol_aspect_extract <-read.csv("V:/Project/Terrestrial/adpe/aschmidt/crozier_GIS_layers/croz_selected_aspect_corrected_extract.txt", header=TRUE)
 
 
-# 
-# subcol_aspect_extract$cos <- cos(subcol_aspect_extract$VALUE*pi/180)
-# subcol_aspect_extract$sin <- sin(subcol_aspect_extract$VALUE*pi/180)
-
 
 subcol_aspect_summ <- subcol_aspect_extract%>%
   # use circular to create a circular object to calculated mean aspect
@@ -124,43 +120,3 @@ r_aspect_corr_rast@data@min<- 0
 
 writeRaster(r_aspect_corr_rast,"V:/Project/Terrestrial/adpe/aschmidt/royds_GIS_layers/royds_aspect_corrected.tif", overwrite=TRUE)
 # Brought the above raster into GIS project and extracted aspect values for all cells in subcolonies (using subcolony raster layer and extract tool)
-# In this extracted file, SRCID_FEAT = 
-
-# # r_subcol_aspect_extract <-read.csv("V:/Project/Terrestrial/adpe/aschmidt/royds_GIS_layers/royds_aspect_corrected_extract.txt", header=TRUE)
-# r_subcol_aspect_extract <-read.csv("V:/Project/Terrestrial/adpe/aschmidt/royds_GIS_layers/royds_aspect_corrected_extract.csv", header=TRUE)
-# 
-# 
-# # 
-# # subcol_aspect_extract$cos <- cos(subcol_aspect_extract$VALUE*pi/180)
-# # subcol_aspect_extract$sin <- sin(subcol_aspect_extract$VALUE*pi/180)
-# 
-# 
-# r_subcol_aspect_summ <- r_subcol_aspect_extract%>%
-#   # use circular to create a circular object to calculated mean aspect
-#   mutate(circ=circular(Value, type="angles", units="degrees",modulo="2pi", template='geographics'))%>%
-#   group_by(SrcID_Feat)%>%
-#   summarize(mean_aspect=mean(circ))
-# 
-# hist(as.numeric(r_subcol_aspect_summ$mean_aspect[r_subcol_aspect_summ$mean_aspect>=0]))
-# range(as.numeric(r_subcol_aspect_summ$mean_aspect))
-# 
-# write.csv(r_subcol_aspect_summ, "data/royds_selected_aspect_corrected.csv", row.names=FALSE)
-
-
-
-
-
-# range(unique(subcol_aspect_extract$SRCID_FEAT))
-# summary(subcol_aspect_summ)
-# range(subcol_aspect_summ$mean_aspect)
-# hist(as.numeric(subcol_aspect_summ$mean_aspect[subcol_aspect_summ$mean_aspect>=0]))\
-
-
-
-# aspect_test <- subcol_aspect_extract%>%
-#  group_by(SRCID_FEAT)%>%
-#   summarize(mean_aspect=mean(circ))
-#   # summarize(mean_cos=mean(cos), mean_sin=mean(sin))%>%
-  # 
-  # 
-  # mutate(mean_aspect=(360+atan2(mean_sin,mean_cos))*(180/pi))
